@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>TacticoFutbol</title>
+<style>
+:root{
+  --ff-cond:"Arial Narrow",Arial,sans-serif;
+  --ff-body:Arial,Helvetica,sans-serif;
+  --v1:#081a0f;--v2:#0f3a1c;--v3:#196632;--v4:#22994a;--v5:#3dbc65;
+  --amarillo:#f5c842;--naranja:#f07820;--rojo:#e8403a;--azul:#3a8fe8;
+  --bg:#0d110e;--bg2:#131a14;--bg3:#192018;
+  --txt:#edeae0;--txt2:#8fad88;--txt3:#4a6644;
+  --radio:10px;--radio-lg:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{height:100%;}
+body{font-family:var(--ff-body);background:var(--bg);color:var(--txt);display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;overscroll-behavior:none;}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:680px;margin:0 auto;width:100%;}
+
+/* HEADER */
+header{background:var(--v1);padding:9px 14px 7px;border-bottom:2px solid var(--amarillo);flex-shrink:0;}
+.hd-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+header h1{font-family:var(--ff-cond);font-size:20px;font-weight:800;letter-spacing:1px;white-space:nowrap;}
+header h1 span{color:var(--amarillo);}
+.lang-toggle{display:flex;gap:3px;background:var(--bg2);border-radius:6px;padding:3px;flex-shrink:0;}
+.lang-btn{font-family:var(--ff-cond);font-size:11px;font-weight:700;padding:3px 7px;border:none;border-radius:4px;cursor:pointer;background:transparent;color:var(--txt3);letter-spacing:.5px;transition:.15s;}
+.lang-btn.on{background:var(--v3);color:var(--amarillo);}
+
+/* NAV */
+nav{display:flex;background:var(--v1);border-bottom:1px solid var(--v2);flex-shrink:0;}
+.nb{flex:1;padding:9px 4px;border:none;background:transparent;font-family:var(--ff-cond);font-size:13px;font-weight:700;letter-spacing:.3px;color:var(--txt3);cursor:pointer;border-bottom:3px solid transparent;transition:.15s;}
+.nb.on{color:var(--amarillo);border-bottom-color:var(--amarillo);}
+
+/* SCROLL */
+#main{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 10px 20px;}
+#main::-webkit-scrollbar{width:3px;}
+#main::-webkit-scrollbar-thumb{background:var(--v3);border-radius:2px;}
+
+.screen{display:none;} .screen.on{display:block;}
+
+/* ── CAMPO SVG ── */
+.pitch-wrap{position:relative;border-radius:var(--radio-lg);overflow:hidden;background:#0f2d16;margin-bottom:10px;border:1px solid var(--v2);}
+.pitch-svg{width:100%;display:block;touch-action:pan-y;}
+/* touch-action:none solo cuando hay drag activo (se aplica via JS) */
+.pitch-svg.dragging{touch-action:none;}
+
+/* jugadores */
+.jug{cursor:grab;user-select:none;}
+.jug:active{cursor:grabbing;}
+.jug-rim-a{fill:#1a6636;stroke:#3dbc65;stroke-width:1.5;}
+.jug-rim-b{fill:#183060;stroke:#4a7ae8;stroke-width:1.5;}
+.jug-rim-key{fill:#7a5200;stroke:var(--amarillo);stroke-width:2;}
+.jug-rim-danger{fill:#6a1a10;stroke:var(--naranja);stroke-width:2;}
+.jug-txt{font-family:var(--ff-cond);font-size:8.5px;font-weight:800;fill:#fff;text-anchor:middle;dominant-baseline:middle;pointer-events:none;letter-spacing:.3px;}
+.jug-lbl{font-family:var(--ff-cond);font-size:7.5px;font-weight:600;fill:rgba(255,255,255,.7);text-anchor:middle;dominant-baseline:hanging;pointer-events:none;}
+.jug-lbl-key{fill:var(--amarillo);}
+.jug-lbl-danger{fill:var(--naranja);}
+
+/* INFO FORMACION */
+.form-display{display:flex;gap:6px;align-items:center;padding:7px 10px;background:var(--bg2);border-radius:var(--radio);margin-bottom:8px;border:1px solid var(--v2);}
+.form-num{font-family:var(--ff-cond);font-size:22px;font-weight:800;color:var(--amarillo);}
+.form-lbl{font-family:var(--ff-cond);font-size:11px;font-weight:600;color:var(--txt3);letter-spacing:.5px;line-height:1.3;}
+.form-reset{margin-left:auto;font-family:var(--ff-cond);font-size:11px;font-weight:700;padding:4px 10px;background:transparent;border:1px solid var(--v2);border-radius:6px;color:var(--txt3);cursor:pointer;}
+
+/* FORM CONTROLS */
+.form-row{display:flex;gap:8px;margin-bottom:8px;align-items:flex-end;}
+.fg{flex:1;}
+.fg label{display:block;font-family:var(--ff-cond);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--txt3);text-transform:uppercase;margin-bottom:4px;}
+select,input[type=text],textarea{width:100%;padding:8px 11px;background:var(--bg3);border:1.5px solid var(--v2);border-radius:var(--radio);color:var(--txt);font-family:var(--ff-body);font-size:14px;font-weight:500;appearance:none;-webkit-appearance:none;transition:border-color .15s;}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--v4);}
+select option{background:#0f2a14;}
+textarea{resize:none;height:60px;line-height:1.5;font-size:13px;}
+
+/* CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.chip{padding:5px 10px;background:var(--bg3);border:1.5px solid var(--v2);border-radius:20px;font-size:12px;font-weight:500;color:var(--txt2);cursor:pointer;transition:.15s;user-select:none;}
+.chip.on{background:rgba(34,153,74,.25);border-color:var(--v4);color:var(--v5);}
+
+/* SECTION TITLE */
+.stit{font-family:var(--ff-cond);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--amarillo);text-transform:uppercase;margin:12px 0 7px;display:flex;align-items:center;gap:7px;}
+.stit::after{content:'';flex:1;height:1px;background:rgba(245,200,66,.2);}
+
+/* BUTTONS */
+.btn-main{width:100%;padding:12px;background:var(--v3);border:none;border-radius:var(--radio);color:#fff;font-family:var(--ff-cond);font-size:17px;font-weight:800;letter-spacing:1px;cursor:pointer;transition:.15s;margin-top:4px;}
+.btn-main:active{background:var(--v4);transform:scale(.98);}
+.btn-sec{padding:7px 13px;background:transparent;border:1.5px solid var(--v2);border-radius:var(--radio);color:var(--txt2);font-family:var(--ff-cond);font-size:13px;font-weight:700;cursor:pointer;}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;padding:40px;gap:10px;}
+.spin{width:34px;height:34px;border:3px solid var(--v2);border-top-color:var(--v4);border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading p{font-family:var(--ff-cond);font-size:15px;font-weight:700;letter-spacing:1px;color:var(--v5);}
+
+/* RESULTADO */
+.res-card{background:var(--bg2);border:1.5px solid var(--v2);border-radius:var(--radio-lg);padding:14px;margin-top:10px;animation:pop .3s ease;}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.res-badge{display:inline-block;background:var(--v3);color:var(--amarillo);padding:2px 9px;border-radius:20px;font-family:var(--ff-cond);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:8px;}
+.res-title{font-family:var(--ff-cond);font-size:20px;font-weight:800;margin-bottom:12px;line-height:1.2;}
+.pill{display:inline-block;background:rgba(61,188,101,.2);border:1px solid var(--v5);color:var(--v5);padding:1px 9px;border-radius:20px;font-family:var(--ff-cond);font-size:13px;font-weight:700;}
+.pill-gold{background:rgba(245,200,66,.15);border-color:var(--amarillo);color:var(--amarillo);}
+.pill-orange{background:rgba(240,120,32,.15);border-color:var(--naranja);color:var(--naranja);}
+
+.bloque{margin-bottom:12px;}
+.bh{font-family:var(--ff-cond);font-size:13px;font-weight:700;letter-spacing:1.5px;color:var(--amarillo);text-transform:uppercase;margin-bottom:7px;}
+.bloque p,.bloque li{font-family:var(--ff-body);font-size:14px;font-weight:500;line-height:1.6;color:var(--txt);}
+.bloque ul{padding-left:16px;}
+.bloque li{margin-bottom:4px;}
+.card-ok{background:rgba(34,153,74,.18);border-left:3px solid var(--v4);padding:9px 12px;border-radius:0 var(--radio) var(--radio) 0;margin:5px 0;}
+.card-alert{background:rgba(240,120,32,.15);border-left:3px solid var(--naranja);padding:9px 12px;border-radius:0 var(--radio) var(--radio) 0;margin:5px 0;}
+.card-danger{background:rgba(232,64,58,.15);border-left:3px solid var(--rojo);padding:9px 12px;border-radius:0 var(--radio) var(--radio) 0;margin:5px 0;}
+.card-ok p,.card-alert p,.card-danger p{font-size:13px;font-weight:500;line-height:1.5;}
+
+/* LEYENDA */
+.leyenda{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+.ley-item{display:flex;align-items:center;gap:5px;font-family:var(--ff-cond);font-size:11px;font-weight:700;color:var(--txt2);}
+.ley-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.ley-dot-a{background:#1a6636;border:1.5px solid #3dbc65;}
+.ley-dot-b{background:#183060;border:1.5px solid #4a7ae8;}
+.ley-dot-key{background:#7a5200;border:2px solid var(--amarillo);}
+.ley-dot-danger{background:#6a1a10;border:2px solid var(--naranja);}
+
+/* FORMACION CAMBIO BADGE */
+.form-change{background:rgba(245,200,66,.12);border:1.5px solid var(--amarillo);border-radius:var(--radio);padding:10px 12px;margin:8px 0;}
+.form-change-title{font-family:var(--ff-cond);font-size:14px;font-weight:800;color:var(--amarillo);margin-bottom:3px;}
+.form-change p{font-size:13px;color:var(--txt2);}
+
+/* PRONOSTICO */
+.fav-banner{border-radius:var(--radio);padding:13px;text-align:center;margin-bottom:10px;}
+.fav-local{background:rgba(58,143,232,.13);border:1.5px solid var(--azul);}
+.fav-visit{background:rgba(232,64,58,.13);border:1.5px solid var(--rojo);}
+.fav-eq{background:rgba(245,200,66,.1);border:1.5px solid var(--amarillo);}
+.fav-txt{font-family:var(--ff-cond);font-size:26px;font-weight:800;line-height:1;}
+.fav-sub{font-size:12px;color:var(--txt2);margin-top:3px;font-family:var(--ff-body);}
+.score-pred{font-family:var(--ff-cond);font-size:30px;font-weight:800;text-align:center;letter-spacing:2px;margin:6px 0 2px;}
+.score-sub{font-size:11px;text-align:center;color:var(--txt3);font-family:var(--ff-body);margin-bottom:12px;}
+.metricas{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0;}
+.met-card{background:var(--bg3);border-radius:var(--radio);padding:10px;text-align:center;}
+.met-val{font-family:var(--ff-cond);font-size:15px;font-weight:800;color:var(--amarillo);}
+.met-lbl{font-size:10px;color:var(--txt3);margin-top:2px;font-family:var(--ff-body);}
+.barra-wrap{margin:7px 0;}
+.barra-lbl{display:flex;justify-content:space-between;font-family:var(--ff-cond);font-size:12px;font-weight:700;margin-bottom:4px;}
+.barra-track{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;display:flex;}
+.barra-l{height:100%;background:var(--azul);}
+.barra-v{height:100%;background:var(--rojo);flex:1;}
+
+/* TABS / HIST */
+.tabs{display:flex;gap:3px;background:var(--bg3);padding:3px;border-radius:var(--radio);margin-bottom:10px;}
+.tab{flex:1;padding:7px;border:none;background:transparent;border-radius:7px;font-family:var(--ff-cond);font-size:13px;font-weight:700;color:var(--txt3);cursor:pointer;transition:.15s;}
+.tab.on{background:var(--v2);color:var(--amarillo);}
+.hist-item{background:var(--bg3);border-radius:var(--radio);padding:10px 12px;margin-bottom:7px;border:1px solid var(--v2);}
+.hist-fecha{font-size:11px;color:var(--txt3);margin-bottom:2px;}
+.hist-titulo{font-family:var(--ff-cond);font-size:15px;font-weight:700;}
+.empty{text-align:center;padding:30px 16px;}
+.empty .ico{font-size:40px;margin-bottom:8px;}
+.empty p{font-size:13px;color:var(--txt3);}
+
+/* HOME */
+.home-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+.hcard{background:var(--bg2);border:1.5px solid var(--v2);border-radius:var(--radio-lg);padding:16px 12px;cursor:pointer;text-align:center;transition:.15s;}
+.hcard:active{border-color:var(--amarillo);transform:scale(.98);}
+.hcard-ico{font-size:28px;margin-bottom:6px;}
+.hcard h2{font-family:var(--ff-cond);font-size:16px;font-weight:800;color:var(--amarillo);margin-bottom:4px;}
+.hcard p{font-size:11px;color:var(--txt2);line-height:1.4;}
+.home-intro{background:var(--bg2);border-radius:var(--radio);padding:11px;border-left:3px solid var(--v4);margin-bottom:4px;}
+.home-intro p{font-size:13px;line-height:1.6;color:var(--txt2);}
+
+/* DOS CAMPOS PRONOSTICO */
+.dos-ep{display:grid;grid-template-columns:1fr 16px 1fr;gap:6px;align-items:start;margin:6px 0;}
+.vs-mid{text-align:center;font-family:var(--ff-cond);font-size:14px;font-weight:800;color:var(--amarillo);padding-top:32px;}
+.ep{background:var(--bg3);border-radius:var(--radio);padding:10px;border-top:3px solid var(--azul);}
+.ep.visit{border-top-color:var(--rojo);}
+.ep-lbl{font-family:var(--ff-cond);font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--azul);margin-bottom:7px;}
+.ep.visit .ep-lbl{color:var(--rojo);}
+.ep select,.ep input{margin-bottom:7px;}
+
+@media(max-width:360px){
+  .home-cards{grid-template-columns:1fr;}
+  .dos-ep{grid-template-columns:1fr;}
+  .vs-mid{padding-top:0;}
+}
+
+/* ── MENÚ CONTEXTUAL POSICIÓN ── */
+#pos-menu{
+  position:fixed;z-index:9999;
+  background:#0d1e10;border:1.5px solid var(--amarillo);
+  border-radius:10px;padding:4px;
+  box-shadow:0 4px 20px rgba(0,0,0,.7);
+  display:none;flex-direction:column;gap:2px;min-width:110px;
+}
+#pos-menu.visible{display:flex;}
+.pm-title{font-family:var(--ff-cond);font-size:10px;font-weight:700;
+  letter-spacing:1.5px;color:var(--txt3);padding:4px 8px 2px;text-transform:uppercase;}
+.pm-btn{font-family:var(--ff-cond);font-size:14px;font-weight:800;
+  padding:7px 12px;border:none;background:transparent;color:var(--txt);
+  cursor:pointer;border-radius:7px;text-align:left;transition:.12s;letter-spacing:.3px;}
+.pm-btn:hover,.pm-btn:active{background:var(--v3);color:var(--amarillo);}
+.pm-btn.current{color:var(--amarillo);}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="hd-row">
+    <h1>Táctico<span>Fútbol</span></h1>
+    <div class="lang-toggle">
+      <button class="lang-btn on" onclick="setLang('simple')" id="lb-simple">Simple</button>
+      <button class="lang-btn" onclick="setLang('medio')" id="lb-medio">Medio</button>
+      <button class="lang-btn" onclick="setLang('tec')" id="lb-tec">Técnico</button>
+    </div>
+  </div>
+</header>
+<nav>
+  <button class="nb on" onclick="ir('home')" id="nb-home">⚽ Inicio</button>
+  <button class="nb" onclick="ir('dt')" id="nb-dt">🎯 Modo DT</button>
+  <button class="nb" onclick="ir('pron')" id="nb-pron">📊 Pronóstico</button>
+</nav>
+<div id="main">
+
+<!-- HOME -->
+<div id="sc-home" class="screen on">
+  <div class="home-intro"><p>Motor de análisis táctico basado en superioridad numérica. Principios de Seirul·lo, Lillo y Guardiola.</p></div>
+  <div class="home-cards">
+    <div class="hcard" onclick="ir('dt')"><div class="hcard-ico">🎯</div><h2>Modo DT</h2><p>Propuesta táctica para vencer cualquier formación rival</p></div>
+    <div class="hcard" onclick="ir('pron')"><div class="hcard-ico">📊</div><h2>Pronóstico</h2><p>Predice el desarrollo del partido entre dos equipos</p></div>
+  </div>
+  <div class="stit">Recientes</div>
+  <div id="home-hist"><div class="empty"><div class="ico">📋</div><p>Tus análisis aparecerán aquí.</p></div></div>
+</div>
+
+<!-- MODO DT -->
+<div id="sc-dt" class="screen">
+  <div class="tabs">
+    <button class="tab on" onclick="tab('dt','nuevo')">Nuevo análisis</button>
+    <button class="tab" onclick="tab('dt','hist')">Historial</button>
+  </div>
+  <div id="dt-nuevo">
+
+    <div class="stit">Formación rival</div>
+    <div class="form-row">
+      <div class="fg">
+        <label>Plantilla rival (elige para cargar)</label>
+        <select id="dt-fr" onchange="cargarRival()">
+          <option value="">— Elige para cargar o dibuja —</option>
+          <option value="4-4-2">4-4-2</option>
+          <option value="4-4-2r">4-4-2 Rombo</option>
+          <option value="4-3-3">4-3-3</option>
+          <option value="4-2-3-1">4-2-3-1</option>
+          <option value="4-1-4-1">4-1-4-1</option>
+          <option value="4-5-1">4-5-1</option>
+          <option value="4-2-2-2">4-2-2-2</option>
+          <option value="4-3-2-1">4-3-2-1 (árbol de navidad)</option>
+          <option value="3-5-2">3-5-2</option>
+          <option value="3-4-3">3-4-3</option>
+          <option value="3-4-1-2">3-4-1-2</option>
+          <option value="3-4-2-1">3-4-2-1</option>
+          <option value="3-6-1">3-6-1</option>
+          <option value="5-3-2">5-3-2</option>
+          <option value="5-4-1">5-4-1</option>
+          <option value="4-6-0">4-6-0</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Estilo rival</label>
+        <select id="dt-er">
+          <option value="">— Estilo —</option>
+          <option value="presion-alta">Presión alta</option>
+          <option value="bloque-medio">Bloque medio</option>
+          <option value="bloque-bajo">Bloque bajo</option>
+          <option value="contraataque">Contraataque</option>
+          <option value="posesion">Posesión</option>
+          <option value="juego-directo">Juego directo</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- CAMPO INTERACTIVO -->
+    <div class="form-display">
+      <div>
+        <div class="form-num" id="rival-form-display">—</div>
+        <div class="form-lbl">RIVAL (arriba · rojo/naranja = peligrosos)</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div class="form-num" id="mio-form-display">—</div>
+        <div class="form-lbl" style="text-align:right">TU EQUIPO (abajo · dorado = claves)</div>
+      </div>
+    </div>
+
+    <div class="pitch-wrap">
+      <svg id="svg-campo" class="pitch-svg" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gpitch" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0d4020"/><stop offset="50%" stop-color="#0a3016"/><stop offset="100%" stop-color="#0d4020"/>
+          </linearGradient>
+        </defs>
+        <!-- FONDO CÉSPED -->
+        <rect width="300" height="500" fill="url(#gpitch)"/>
+        <!-- FRANJAS ALTERNADAS -->
+        <rect x="0" y="0"   width="300" height="56" fill="rgba(255,255,255,.025)"/>
+        <rect x="0" y="112" width="300" height="56" fill="rgba(255,255,255,.025)"/>
+        <rect x="0" y="224" width="300" height="56" fill="rgba(255,255,255,.025)"/>
+        <rect x="0" y="336" width="300" height="56" fill="rgba(255,255,255,.025)"/>
+        <rect x="0" y="448" width="300" height="52" fill="rgba(255,255,255,.025)"/>
+        <!-- ZONA RIVAL (tinte rojo suave) -->
+        <rect x="8" y="8" width="284" height="242" fill="rgba(180,40,20,.07)" rx="2"/>
+        <!-- ZONA PROPIA (tinte azul suave) -->
+        <rect x="8" y="250" width="284" height="242" fill="rgba(30,80,200,.07)" rx="2"/>
+        <!-- LÍNEAS CAMPO -->
+        <rect x="8" y="8" width="284" height="484" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="1.5" rx="2"/>
+        <line x1="8" y1="250" x2="292" y2="250" stroke="rgba(255,255,255,.6)" stroke-width="1.5"/>
+        <circle cx="150" cy="250" r="38" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+        <circle cx="150" cy="250" r="3.5" fill="rgba(255,255,255,.8)"/>
+        <!-- ÁREA ARRIBA -->
+        <rect x="50" y="8" width="200" height="67" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+        <rect x="98" y="8" width="104" height="27" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.2"/>
+        <rect x="115" y="1" width="70" height="11" fill="rgba(255,80,60,.2)" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/>
+        <circle cx="150" cy="60" r="3" fill="rgba(255,255,255,.6)"/>
+        <!-- ÁREA ABAJO -->
+        <rect x="50" y="425" width="200" height="67" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+        <rect x="98" y="465" width="104" height="27" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.2"/>
+        <rect x="115" y="488" width="70" height="11" fill="rgba(60,120,255,.2)" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/>
+        <circle cx="150" cy="440" r="3" fill="rgba(255,255,255,.6)"/>
+        <!-- GUÍAS DE ZONA (punteadas) -->
+        <line x1="8" y1="118" x2="292" y2="118" stroke="rgba(255,100,80,.25)" stroke-width="1" stroke-dasharray="4,6"/>
+        <line x1="8" y1="202" x2="292" y2="202" stroke="rgba(255,100,80,.25)" stroke-width="1" stroke-dasharray="4,6"/>
+        <line x1="8" y1="298" x2="292" y2="298" stroke="rgba(80,150,255,.25)" stroke-width="1" stroke-dasharray="4,6"/>
+        <line x1="8" y1="382" x2="292" y2="382" stroke="rgba(80,150,255,.25)" stroke-width="1" stroke-dasharray="4,6"/>
+        <!-- LABELS ZONA -->
+        <text x="150" y="134" font-family="Arial Narrow,Arial,sans-serif" font-size="9" font-weight="700" fill="rgba(255,120,80,.45)" text-anchor="middle" letter-spacing="3">RIVAL</text>
+        <text x="150" y="372" font-family="Arial Narrow,Arial,sans-serif" font-size="9" font-weight="700" fill="rgba(80,160,255,.45)" text-anchor="middle" letter-spacing="2">TU EQUIPO</text>
+        <!-- JUGADORES -->
+        <g id="g-rival"></g>
+        <g id="g-mio"></g>
+      </svg>
+    </div>
+
+    <div class="form-row">
+      <div class="fg">
+        <label>Cargar mi formación base</label>
+        <select id="dt-mf-base" onchange="cargarPropio()">
+          <option value="">— Elige o crea arrastrando —</option>
+          <option value="4-3-3">4-3-3</option>
+          <option value="4-4-2">4-4-2</option>
+          <option value="4-2-3-1">4-2-3-1</option>
+          <option value="4-1-4-1">4-1-4-1</option>
+          <option value="3-5-2">3-5-2</option>
+          <option value="3-4-3">3-4-3</option>
+          <option value="5-3-2">5-3-2</option>
+          <option value="5-4-1">5-4-1</option>
+          <option value="4-5-1">4-5-1</option>
+          <option value="4-4-2r">4-4-2 Rombo</option>
+          <option value="4-2-2-2">4-2-2-2</option>
+          <option value="4-3-2-1">4-3-2-1</option>
+          <option value="3-4-2-1">3-4-2-1</option>
+          <option value="3-6-1">3-6-1</option>
+          <option value="4-6-0">4-6-0</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Mi fortaleza</label>
+        <select id="dt-mfort">
+          <option value="">— Fortaleza —</option>
+          <option value="velocidad">Velocidad en bandas</option>
+          <option value="posesion">Posesión y pase</option>
+          <option value="aereo">Juego aéreo</option>
+          <option value="presion">Presión alta</option>
+          <option value="fisico">Físico y fuerza</option>
+          <option value="transicion">Transiciones</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="stit">Características del rival</div>
+    <div class="chips" id="chips-rival">
+      <!-- DELANTEROS -->
+      <div class="chip" data-v="dc-alto">DC alto/cabeceador</div>
+      <div class="chip" data-v="dc-rapido">DC muy rápido</div>
+      <div class="chip" data-v="dc-tecnico">DC muy técnico</div>
+      <div class="chip" data-v="dos-puntas">Doble punta peligrosa</div>
+      <!-- EXTREMOS -->
+      <div class="chip" data-v="ext-rapidos">Extremos rápidos</div>
+      <div class="chip" data-v="ext-habil">Extremos habilidosos</div>
+      <div class="chip" data-v="ext-cortan">Extremos que cortan al centro</div>
+      <div class="chip" data-v="ext-centran">Extremos que centran mucho</div>
+      <!-- MEDIOCAMPO -->
+      <div class="chip" data-v="mediapunta">Mediapunta / MCO creativo</div>
+      <div class="chip" data-v="pivote-fuerte">Pivote (MCD) muy fuerte</div>
+      <div class="chip" data-v="doble-pivote">Doble pivote muy sólido</div>
+      <div class="chip" data-v="mc-llegada">MC que llega al área</div>
+      <div class="chip" data-v="mc-box2box">Medio box-to-box incansable</div>
+      <!-- LATERALES -->
+      <div class="chip" data-v="lat-d-sube">Lateral Der. sube mucho</div>
+      <div class="chip" data-v="lat-i-sube">Lateral Izq. sube mucho</div>
+      <div class="chip" data-v="lat-defensivos">Laterales muy defensivos</div>
+      <div class="chip" data-v="carrileros">Carrileros de ida y vuelta</div>
+      <!-- DEFENSA -->
+      <div class="chip" data-v="def-alta">Defensa muy alta</div>
+      <div class="chip" data-v="def-lenta">Defensa lenta</div>
+      <div class="chip" data-v="def-agresiva">Defensa muy agresiva/dura</div>
+      <div class="chip" data-v="zonal">Marca en zona estricta</div>
+      <div class="chip" data-v="individual">Marca individual</div>
+      <!-- PORTERO -->
+      <div class="chip" data-v="portero-sale">Portero sale mal al cruce</div>
+      <div class="chip" data-v="portero-pie">Portero bueno con el pie</div>
+      <!-- COLECTIVO -->
+      <div class="chip" data-v="equipo-fisico">Muy físicos</div>
+      <div class="chip" data-v="desgastado">Equipo desgastado/cansado</div>
+      <div class="chip" data-v="pelota-parada">Peligrosos en pelota parada</div>
+      <div class="chip" data-v="pressing-alto">Presión alta coordinada</div>
+      <div class="chip" data-v="bloque-bajo">Se cierran muy atrás</div>
+      <div class="chip" data-v="salida-limpia">Salen jugando muy bien</div>
+    </div>
+
+    <div class="stit">Notas adicionales (opcional)</div>
+    <textarea id="dt-notas" placeholder="Ej: su portero es muy bueno en 1v1, tienen un mediocampista que dirige todo el juego..."></textarea>
+
+    <button class="btn-main" onclick="analizarDT()">⚡ GENERAR ANÁLISIS TÁCTICO</button>
+  </div>
+
+  <div id="dt-hist" style="display:none">
+    <div id="dt-hist-lista"><div class="empty"><div class="ico">📂</div><p>Sin análisis guardados.</p></div></div>
+  </div>
+  <div id="dt-res" style="display:none"></div>
+</div>
+
+<!-- PRONÓSTICO -->
+<div id="sc-pron" class="screen">
+  <div class="tabs">
+    <button class="tab on" onclick="tab('pron','nuevo')">Nuevo pronóstico</button>
+    <button class="tab" onclick="tab('pron','hist')">Historial</button>
+  </div>
+  <div id="pron-nuevo">
+
+    <!-- FORMACIONES -->
+    <div class="stit">Formaciones</div>
+    <div class="dos-ep">
+      <div class="ep">
+        <div class="ep-lbl">🏠 LOCAL</div>
+        <select id="p-fl">
+          <option value="">— Formación —</option>
+          <option value="4-4-2">4-4-2</option><option value="4-4-2r">4-4-2 Rombo</option>
+          <option value="4-3-3">4-3-3</option><option value="4-2-3-1">4-2-3-1</option>
+          <option value="4-1-4-1">4-1-4-1</option><option value="4-5-1">4-5-1</option>
+          <option value="4-2-2-2">4-2-2-2</option><option value="4-3-2-1">4-3-2-1</option>
+          <option value="3-5-2">3-5-2</option><option value="3-4-3">3-4-3</option>
+          <option value="3-4-1-2">3-4-1-2</option><option value="3-4-2-1">3-4-2-1</option>
+          <option value="3-6-1">3-6-1</option><option value="5-3-2">5-3-2</option>
+          <option value="5-4-1">5-4-1</option><option value="4-6-0">4-6-0</option>
+        </select>
+        <select id="p-el">
+          <option value="">— Estilo —</option>
+          <option value="presion-alta">Presión alta</option>
+          <option value="posesion">Posesión</option>
+          <option value="contraataque">Contraataque</option>
+          <option value="bloque-medio">Bloque medio</option>
+          <option value="bloque-bajo">Bloque bajo</option>
+          <option value="juego-directo">Juego directo</option>
+          <option value="juego-aereo">Juego aéreo/largo</option>
+          <option value="presion-media">Presión media</option>
+        </select>
+      </div>
+      <div class="vs-mid">VS</div>
+      <div class="ep visit">
+        <div class="ep-lbl">✈️ VISITANTE</div>
+        <select id="p-fv">
+          <option value="">— Formación —</option>
+          <option value="4-4-2">4-4-2</option><option value="4-4-2r">4-4-2 Rombo</option>
+          <option value="4-3-3">4-3-3</option><option value="4-2-3-1">4-2-3-1</option>
+          <option value="4-1-4-1">4-1-4-1</option><option value="4-5-1">4-5-1</option>
+          <option value="4-2-2-2">4-2-2-2</option><option value="4-3-2-1">4-3-2-1</option>
+          <option value="3-5-2">3-5-2</option><option value="3-4-3">3-4-3</option>
+          <option value="3-4-1-2">3-4-1-2</option><option value="3-4-2-1">3-4-2-1</option>
+          <option value="3-6-1">3-6-1</option><option value="5-3-2">5-3-2</option>
+          <option value="5-4-1">5-4-1</option><option value="4-6-0">4-6-0</option>
+        </select>
+        <select id="p-ev">
+          <option value="">— Estilo —</option>
+          <option value="presion-alta">Presión alta</option>
+          <option value="posesion">Posesión</option>
+          <option value="contraataque">Contraataque</option>
+          <option value="bloque-medio">Bloque medio</option>
+          <option value="bloque-bajo">Bloque bajo</option>
+          <option value="juego-directo">Juego directo</option>
+          <option value="juego-aereo">Juego aéreo/largo</option>
+          <option value="presion-media">Presión media</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TIPO DE PARTIDO -->
+    <div class="stit">Tipo de partido</div>
+    <div class="chips" id="chips-tipo-partido">
+      <div class="chip" data-v="liga">Liga / Torneo</div>
+      <div class="chip" data-v="copa">Copa / Liguilla</div>
+      <div class="chip" data-v="eliminatoria">Eliminatoria directa</div>
+      <div class="chip" data-v="ida">Partido de ida</div>
+      <div class="chip" data-v="vuelta">Partido de vuelta</div>
+      <div class="chip" data-v="final">Final</div>
+      <div class="chip" data-v="clasico">Clásico / Derbi</div>
+      <div class="chip" data-v="amistoso">Amistoso</div>
+    </div>
+
+    <!-- SITUACIÓN EN TABLA -->
+    <div class="stit">Situación en tabla / Contexto de clasificación</div>
+    <div class="chips" id="chips-tabla">
+      <div class="chip" data-v="local-lider">Local es líder</div>
+      <div class="chip" data-v="visit-lider">Visitante es líder</div>
+      <div class="chip" data-v="local-descenso">Local pelea el descenso</div>
+      <div class="chip" data-v="visit-descenso">Visitante pelea el descenso</div>
+      <div class="chip" data-v="local-clasifica">Local necesita ganar para clasificar</div>
+      <div class="chip" data-v="visit-clasifica">Visitante necesita ganar para clasificar</div>
+      <div class="chip" data-v="local-relajado">Local ya clasificó / no se juega nada</div>
+      <div class="chip" data-v="visit-relajado">Visitante ya clasificó / no se juega nada</div>
+      <div class="chip" data-v="empate-clasifica-local">Un empate le vale al local</div>
+      <div class="chip" data-v="empate-clasifica-visit">Un empate le vale al visitante</div>
+    </div>
+
+    <!-- SI ES PARTIDO DE VUELTA -->
+    <div class="stit">Si es partido de vuelta (global)</div>
+    <div class="chips" id="chips-vuelta">
+      <div class="chip" data-v="local-gana-global">Local gana el global</div>
+      <div class="chip" data-v="visit-gana-global">Visitante gana el global</div>
+      <div class="chip" data-v="empate-global">Global empatado</div>
+      <div class="chip" data-v="local-gana-2mas">Local gana por 2+ goles</div>
+      <div class="chip" data-v="visit-gana-2mas">Visitante gana por 2+ goles</div>
+    </div>
+
+    <!-- CONDICIONES DEL PARTIDO -->
+    <div class="stit">Condiciones y factores extra</div>
+    <div class="chips" id="chips-condiciones">
+      <div class="chip" data-v="local-bajas">Local con bajas importantes</div>
+      <div class="chip" data-v="visit-bajas">Visitante con bajas importantes</div>
+      <div class="chip" data-v="local-sancionado">Local con jugador clave sancionado</div>
+      <div class="chip" data-v="visit-sancionado">Visitante con jugador clave sancionado</div>
+      <div class="chip" data-v="local-racha-buena">Local en buena racha</div>
+      <div class="chip" data-v="visit-racha-buena">Visitante en buena racha</div>
+      <div class="chip" data-v="local-racha-mala">Local en mala racha</div>
+      <div class="chip" data-v="visit-racha-mala">Visitante en mala racha</div>
+      <div class="chip" data-v="lluvia">Lluvia / cancha pesada</div>
+      <div class="chip" data-v="calor">Calor extremo</div>
+      <div class="chip" data-v="cancha-sintetico">Cancha sintética</div>
+      <div class="chip" data-v="altitud">Partido en altitud</div>
+      <div class="chip" data-v="aficion-local">Afición local muy ruidosa</div>
+      <div class="chip" data-v="arbitro-casero">Árbitro favorece al local históricamente</div>
+    </div>
+
+    <button class="btn-main" onclick="generarPron()">🔮 GENERAR PRONÓSTICO</button>
+  </div>
+  <div id="pron-hist" style="display:none">
+    <div id="pron-hist-lista"><div class="empty"><div class="ico">📂</div><p>Sin pronósticos guardados.</p></div></div>
+  </div>
+  <div id="pron-res" style="display:none"></div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MENÚ CONTEXTUAL POSICIÓN -->
+<div id="pos-menu">
+  <div class="pm-title">Cambiar posición</div>
+</div>
+<script>
+
+/* ═══════ IDIOMA ═══════ */
+let LANG='simple';
+function setLang(l){
+  LANG=l;
+  ['simple','medio','tec'].forEach(x=>{
+    const el=document.getElementById('lb-'+x);
+    if(el) el.classList.toggle('on',x===l);
+  });
+  // redibujar labels en campo
+  redibujarLabels();
+}
+
+/* ═══════ NAV ═══════ */
+function ir(sc){
+  ['home','dt','pron'].forEach(x=>{
+    document.getElementById('sc-'+x).classList.toggle('on',x===sc);
+    document.getElementById('nb-'+x).classList.toggle('on',x===sc);
+  });
+  document.getElementById('main').scrollTop=0;
+  if(sc==='home') renderHomeHist();
+}
+function tab(modo,which){
+  const pre=modo==='dt'?'dt':'pron';
+  ['nuevo','hist','res'].forEach(s=>{
+    const el=document.getElementById(pre+'-'+s);
+    if(el) el.style.display=(s===which?'block':'none');
+  });
+  const sc='sc-'+(modo==='dt'?'dt':'pron');
+  document.querySelectorAll('#'+sc+' .tab').forEach((t,i)=>t.classList.toggle('on',(which==='nuevo'&&i===0)||(which==='hist'&&i===1)));
+  if(which==='hist') renderHist(modo);
+}
+
+/* ═══════════════════════════════════════════
+   FORMACIONES — coordenadas en campo 300×500
+   Rival: Y 18..235   Propio: Y 265..482
+════════════════════════════════════════════ */
+const FORM_POS={
+  '4-4-2':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MI',26,148],['MCi',98,148],['MCd',202,148],['MD',274,148],['DCi',110,215],['DCd',190,215]],
+    propio:[['DCi',110,285],['DCd',190,285],['MI',26,352],['MCi',98,352],['MCd',202,352],['MD',274,352],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '4-4-2r':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MCD',150,132],['MI',50,168],['MD',250,168],['MO',150,195],['DCi',110,222],['DCd',190,222]],
+    propio:[['DCi',110,278],['DCd',190,278],['MO',150,305],['MI',50,332],['MD',250,332],['MCD',150,368],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '4-3-3':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MCi',76,148],['MCD',150,138],['MCd',224,148],['EXTi',42,218],['DC',150,218],['EXTd',258,218]],
+    propio:[['EXTi',42,282],['DC',150,282],['EXTd',258,282],['MCi',76,352],['MCD',150,362],['MCd',224,352],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '4-2-3-1':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MCDi',96,135],['MCDd',204,135],['EXTi',44,182],['MO',150,178],['EXTd',256,182],['DC',150,222]],
+    propio:[['DC',150,278],['EXTi',44,318],['MO',150,322],['EXTd',256,318],['MCDi',96,365],['MCDd',204,365],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '4-1-4-1':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MCD',150,128],['MI',36,178],['MCi',108,178],['MCd',192,178],['MD',264,178],['DC',150,222]],
+    propio:[['DC',150,278],['MI',36,322],['MCi',108,322],['MCd',192,322],['MD',264,322],['MCD',150,372],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '3-5-2':{
+    rival:[['PO',150,22],['DFCi',80,78],['DFC',150,78],['DFCd',220,78],['CARi',20,148],['MCi',90,138],['MCD',150,128],['MCd',210,138],['CARd',280,148],['DCi',110,218],['DCd',190,218]],
+    propio:[['DCi',110,282],['DCd',190,282],['CARi',20,352],['MCi',90,362],['MCD',150,372],['MCd',210,362],['CARd',280,352],['DFCi',80,422],['DFC',150,422],['DFCd',220,422],['PO',150,478]]
+  },
+  '3-4-3':{
+    rival:[['PO',150,22],['DFCi',80,78],['DFC',150,78],['DFCd',220,78],['CARi',20,148],['MCi',110,142],['MCd',190,142],['CARd',280,148],['EXTi',44,218],['DC',150,218],['EXTd',256,218]],
+    propio:[['EXTi',44,282],['DC',150,282],['EXTd',256,282],['CARi',20,352],['MCi',110,358],['MCd',190,358],['CARd',280,352],['DFCi',80,422],['DFC',150,422],['DFCd',220,422],['PO',150,478]]
+  },
+  '5-3-2':{
+    rival:[['PO',150,22],['CARi',18,78],['DFCi',80,78],['DFC',150,78],['DFCd',220,78],['CARd',282,78],['MCi',80,152],['MCD',150,142],['MCd',220,152],['DCi',110,218],['DCd',190,218]],
+    propio:[['DCi',110,282],['DCd',190,282],['MCi',80,348],['MCD',150,358],['MCd',220,348],['CARi',18,422],['DFCi',80,422],['DFC',150,422],['DFCd',220,422],['CARd',282,422],['PO',150,478]]
+  },
+  '5-4-1':{
+    rival:[['PO',150,22],['CARi',18,78],['DFCi',80,78],['DFC',150,78],['DFCd',220,78],['CARd',282,78],['MI',36,152],['MCi',108,148],['MCd',192,148],['MD',264,152],['DC',150,218]],
+    propio:[['DC',150,282],['MI',36,348],['MCi',108,352],['MCd',192,352],['MD',264,348],['CARi',18,422],['DFCi',80,422],['DFC',150,422],['DFCd',220,422],['CARd',282,422],['PO',150,478]]
+  },
+  '4-5-1':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MI',24,155],['MCi',84,148],['MCD',150,142],['MCd',216,148],['MD',276,155],['DC',150,218]],
+    propio:[['DC',150,282],['MI',24,345],['MCi',84,352],['MCD',150,358],['MCd',216,352],['MD',276,345],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '4-3-2-1':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MCi',76,142],['MCD',150,132],['MCd',224,142],['MOi',100,188],['MOd',200,188],['DC',150,222]],
+    propio:[['DC',150,278],['MOi',100,312],['MOd',200,312],['MCi',76,358],['MCD',150,368],['MCd',224,358],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '3-4-1-2':{
+    rival:[['PO',150,22],['DFCi',80,78],['DFC',150,78],['DFCd',220,78],['CARi',20,145],['MCi',110,138],['MCd',190,138],['CARd',280,145],['MO',150,188],['DCi',110,222],['DCd',190,222]],
+    propio:[['DCi',110,278],['DCd',190,278],['MO',150,318],['CARi',20,355],['MCi',110,362],['MCd',190,362],['CARd',280,355],['DFCi',80,422],['DFC',150,422],['DFCd',220,422],['PO',150,478]]
+  },
+  '4-2-2-2':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['MCDi',96,135],['MCDd',204,135],['EXTi',54,185],['EXTd',246,185],['DCi',110,218],['DCd',190,218]],
+    propio:[['DCi',110,282],['DCd',190,282],['EXTi',54,315],['EXTd',246,315],['MCDi',96,365],['MCDd',204,365],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  },
+  '3-4-2-1':{
+    rival:[['PO',150,22],['DFCi',80,78],['DFC',150,78],['DFCd',220,78],['CARi',20,145],['MCi',110,138],['MCd',190,138],['CARd',280,145],['MOi',100,192],['MOd',200,192],['DC',150,222]],
+    propio:[['DC',150,278],['MOi',100,308],['MOd',200,308],['CARi',20,355],['MCi',110,362],['MCd',190,362],['CARd',280,355],['DFCi',80,422],['DFC',150,422],['DFCd',220,422],['PO',150,478]]
+  },
+  '3-6-1':{
+    rival:[['PO',150,22],['DFCi',80,78],['DFC',150,78],['DFCd',220,78],['CARi',20,142],['MCi',94,135],['MCDi',148,128],['MCDd',182,128],['MCd',206,135],['CARd',280,142],['DC',150,218]],
+    propio:[['DC',150,282],['CARi',20,358],['MCi',94,365],['MCDi',148,372],['MCDd',182,372],['MCd',206,365],['CARd',280,358],['DFCi',80,422],['DFC',150,422],['DFCd',220,422],['PO',150,478]]
+  },
+  '4-6-0':{
+    rival:[['PO',150,22],['LI',26,78],['DFCi',102,78],['DFCd',198,78],['LD',274,78],['EXTi',36,145],['MCi',104,138],['MCDi',150,128],['MCDd',180,128],['MCd',196,138],['EXTd',264,145]],
+    propio:[['EXTi',36,355],['MCi',104,362],['MCDi',150,372],['MCDd',180,372],['MCd',196,362],['EXTd',264,355],['LI',26,422],['DFCi',102,422],['DFCd',198,422],['LD',274,422],['PO',150,478]]
+  }
+};
+
+/* ═══════ ETIQUETAS POR IDIOMA ═══════ */
+const LMAP={
+  simple:{PO:'POR',LI:'LAT IZQ',LD:'LAT DER',DFCi:'DEF IZQ',DFCd:'DEF DER',DFC:'DEF CEN',
+    MCi:'MED IZQ',MCd:'MED DER',MCD:'MED DEF',MCDi:'MED DEF',MCDd:'MED DEF',MI:'MED IZQ',MD:'MED DER',
+    MO:'MED OFE',MOi:'MED OFE',MOd:'MED OFE',EXTi:'EXT IZQ',EXTd:'EXT DER',
+    DC:'DEL CEN',DCi:'DEL IZQ',DCd:'DEL DER',SD:'2DO DEL',CARi:'CAR IZQ',CARd:'CAR DER'},
+  medio:{PO:'PO',LI:'LI',LD:'LD',DFCi:'DFC',DFCd:'DFC',DFC:'DFC',
+    MCi:'MC',MCd:'MC',MCD:'MCD',MCDi:'MCD',MCDd:'MCD',MI:'MI',MD:'MD',
+    MO:'MCO',MOi:'MCO',MOd:'MCO',EXTi:'EXTI',EXTd:'EXTD',
+    DC:'DC',DCi:'DC',DCd:'DC',SD:'SD',CARi:'CAR',CARd:'CAR'},
+  tec:{PO:'PO',LI:'LI',LD:'LD',DFCi:'DFCi',DFCd:'DFCd',DFC:'DFC',
+    MCi:'MCi',MCd:'MCd',MCD:'MCD',MCDi:'MCDi',MCDd:'MCDd',MI:'MI',MD:'MD',
+    MO:'MCO',MOi:'MCOi',MOd:'MCOd',EXTi:'EXTi',EXTd:'EXTd',
+    DC:'DC',DCi:'DCi',DCd:'DCd',SD:'SD',CARi:'CARi',CARd:'CARd'}
+};
+function lbl(code){return (LMAP[LANG]||LMAP.simple)[code]||code;}
+
+/* ═══════════════════════════════════════
+   DETECCIÓN AUTOMÁTICA DE POSICIÓN
+   Al arrastrar al jugador se asigna automáticamente
+   una posición según zona del campo y X
+════════════════════════════════════════ */
+function detectarPosicion(cx,cy,equipo){
+  // Bandas horizontales absolutas (campo X=8..292)
+  const xBI  = cx < 78;               // banda izq pura → EXT/lateral
+  const xCen = cx >= 138 && cx < 162; // centro exacto
+  const xBD  = cx >= 222;             // banda der pura → EXT/lateral
+
+  if(equipo==='rival'){
+    if(cy <= 42) return 'PO';
+
+    // DEFENSA rival Y 43–118
+    if(cy <= 118){
+      if(xBI) return 'LI'; if(xBD) return 'LD';
+      return cx<150?'DFCi':'DFCd';
+    }
+    // MEDIOCAMPO DEFENSIVO rival Y 119–165
+    if(cy <= 165){
+      if(xBI) return 'MI'; if(xBD) return 'MD';
+      if(xCen) return 'MCD';
+      return cx<150?'MCi':'MCd';
+    }
+    // MEDIOCAMPO OFENSIVO / MCO rival Y 166–202
+    if(cy <= 202){
+      if(xBI) return 'MI'; if(xBD) return 'MD';
+      if(xCen) return 'MO';
+      return cx<150?'MCi':'MCd';
+    }
+    // ATAQUE ALTO rival Y 203–225 → extremos o DC clásico
+    if(cy <= 225){
+      if(xBI) return 'EXTi'; if(xBD) return 'EXTd';
+      if(xCen) return 'DC';
+      return cx<150?'DCi':'DCd';
+    }
+    // ATAQUE BAJO rival Y 226–490 → SD (segundo delantero) al interior, DC al centro
+    if(xBI) return 'EXTi'; if(xBD) return 'EXTd';
+    if(xCen) return 'DC';
+    return 'SD'; // interior bajo = segundo delantero
+
+  } else {
+    if(cy >= 456) return 'PO';
+
+    // DEFENSA propia Y 382–455
+    if(cy >= 382){
+      if(xBI) return 'LI'; if(xBD) return 'LD';
+      return cx<150?'DFCi':'DFCd';
+    }
+    // MEDIOCAMPO DEFENSIVO propio Y 336–381
+    if(cy >= 336){
+      if(xBI) return 'MI'; if(xBD) return 'MD';
+      if(xCen) return 'MCD';
+      return cx<150?'MCi':'MCd';
+    }
+    // MEDIOCAMPO OFENSIVO / MCO propio Y 298–335
+    if(cy >= 298){
+      if(xBI) return 'MI'; if(xBD) return 'MD';
+      if(xCen) return 'MO';
+      return cx<150?'MCi':'MCd';
+    }
+    // ATAQUE ALTO propio Y 275–297 → extremos o DC clásico
+    if(cy >= 275){
+      if(xBI) return 'EXTi'; if(xBD) return 'EXTd';
+      if(xCen) return 'DC';
+      return cx<150?'DCi':'DCd';
+    }
+    // ATAQUE BAJO propio Y 8–274 → SD al interior, DC al centro
+    if(xBI) return 'EXTi'; if(xBD) return 'EXTd';
+    if(xCen) return 'DC';
+    return 'SD'; // interior muy avanzado = segundo delantero
+  }
+}
+
+/* ═══════ ESTADO DEL CAMPO ═══════ */
+let jugadoresRival=[];   // [{id,code,cx,cy,el}]
+let jugadoresMios=[];
+
+function crearJugadorSVG(parent,id,code,cx,cy,equipo,tipo){
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.setAttribute('id','jug-'+id);
+  g.setAttribute('class','jug');
+  g.setAttribute('transform',`translate(${cx},${cy})`);
+  g.dataset.id=id; g.dataset.equipo=equipo; g.dataset.code=code;
+
+  // Colores explícitos (no clases CSS — más confiables en SVG dinámico)
+  const fill   = equipo==='rival' ? '#0d3820' : '#0d1e60';
+  const stroke = equipo==='rival' ? '#2ecc71'  : '#4a90e8';
+  const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  circle.setAttribute('r','14');
+  circle.setAttribute('fill', fill);
+  circle.setAttribute('stroke', stroke);
+  circle.setAttribute('stroke-width','2');
+
+  const txtEl=document.createElementNS('http://www.w3.org/2000/svg','text');
+  txtEl.setAttribute('font-family','Arial Narrow,Arial,sans-serif');
+  txtEl.setAttribute('font-size','9');
+  txtEl.setAttribute('font-weight','800');
+  txtEl.setAttribute('fill','#ffffff');
+  txtEl.setAttribute('text-anchor','middle');
+  txtEl.setAttribute('dominant-baseline','middle');
+  txtEl.setAttribute('y','0.5');
+  txtEl.setAttribute('pointer-events','none');
+  txtEl.textContent=lbl(code);
+
+  const lblEl=document.createElementNS('http://www.w3.org/2000/svg','text');
+  lblEl.setAttribute('font-family','Arial Narrow,Arial,sans-serif');
+  lblEl.setAttribute('font-size','7.5');
+  lblEl.setAttribute('font-weight','700');
+  lblEl.setAttribute('fill', equipo==='rival'?'rgba(180,255,180,.75)':'rgba(180,200,255,.75)');
+  lblEl.setAttribute('text-anchor','middle');
+  lblEl.setAttribute('dominant-baseline','hanging');
+  lblEl.setAttribute('y','17');
+  lblEl.setAttribute('pointer-events','none');
+  lblEl.textContent=code;
+
+  g.appendChild(circle); g.appendChild(txtEl); g.appendChild(lblEl);
+  parent.appendChild(g);
+  makeDraggable(g,equipo);
+  return g;
+}
+
+function cargarRival(){
+  const f=document.getElementById('dt-fr').value;
+  if(!f) return;
+  const data=FORM_POS[f];
+  if(!data) return;
+  jugadoresRival=[];
+  document.getElementById('g-rival').innerHTML='';
+  const parent=document.getElementById('g-rival');
+  data.rival.forEach(([code,cx,cy],i)=>{
+    const id='r'+i;
+    const el=crearJugadorSVG(parent,id,code,cx,cy,'rival','normal');
+    jugadoresRival.push({id,code,cx,cy,el});
+  });
+  recalcFormacion('rival');
+}
+
+function cargarPropio(){
+  const f=document.getElementById('dt-mf-base').value;
+  if(!f) return;
+  const data=FORM_POS[f];
+  if(!data) return;
+  jugadoresMios=[];
+  document.getElementById('g-mio').innerHTML='';
+  const parent=document.getElementById('g-mio');
+  data.propio.forEach(([code,cx,cy],i)=>{
+    const id='m'+i;
+    const el=crearJugadorSVG(parent,id,code,cx,cy,'mio','normal');
+    jugadoresMios.push({id,code,cx,cy,el});
+  });
+  recalcFormacion('mio');
+}
+
+function redibujarLabels(){
+  [...jugadoresRival,...jugadoresMios].forEach(j=>{
+    const g=document.getElementById('jug-'+j.id);
+    if(!g) return;
+    const txts=g.querySelectorAll('text');
+    if(txts[0]) txts[0].textContent=lbl(j.code);
+  });
+}
+
+/* ═══════ MENÚ CONTEXTUAL DE POSICIÓN ═══════ */
+// Opciones disponibles por zona, en orden lógico de posición
+const MENU_OPCIONES = {
+  // PORTERO
+  PO:  ['PO'],
+  // DEFENSAS
+  LI:  ['LI','MI','CARi'],
+  LD:  ['LD','MD','CARd'],
+  DFCi:['DFCi','DFC','LI','CARi'],
+  DFCd:['DFCd','DFC','LD','CARd'],
+  DFC: ['DFC','DFCi','DFCd'],
+  CARi:['CARi','LI','MI'],
+  CARd:['CARd','LD','MD'],
+  // MEDIOS DEFENSIVOS
+  MI:  ['MI','MCD','MCi','LI'],
+  MD:  ['MD','MCD','MCd','LD'],
+  MCi: ['MCi','MCD','MI','MO'],
+  MCd: ['MCd','MCD','MD','MO'],
+  MCD: ['MCD','MCi','MCd','MI','MD'],
+  MCDi:['MCDi','MCD','MCi'],
+  MCDd:['MCDd','MCD','MCd'],
+  // MEDIOS OFENSIVOS
+  MO:  ['MO','MCi','MCd','SD','EXTi','EXTd'],
+  MOi: ['MOi','MO','EXTi','SD'],
+  MOd: ['MOd','MO','EXTd','SD'],
+  // DELANTEROS / ATACANTES
+  EXTi:['EXTi','MO','DCi','SD'],
+  EXTd:['EXTd','MO','DCd','SD'],
+  DC:  ['DC','DCi','DCd','SD','MO'],
+  DCi: ['DCi','DC','SD','EXTi','MO'],
+  DCd: ['DCd','DC','SD','EXTd','MO'],
+  SD:  ['SD','DC','DCi','DCd','MO','EXTi','EXTd'],
+};
+
+let menuJugador = null; // {id, equipo, g}
+
+function mostrarMenuPos(g, equipo, clientX, clientY){
+  const id = g.dataset.id;
+  const arr = equipo==='rival' ? jugadoresRival : jugadoresMios;
+  const jug = arr.find(j=>j.id===id);
+  if(!jug) return;
+
+  menuJugador = {id, equipo, g};
+  const menu = document.getElementById('pos-menu');
+  const opciones = MENU_OPCIONES[jug.code] || [jug.code,'DC','SD','MO','MCi','MCd','EXTi','EXTd'];
+
+  // Construir botones
+  menu.innerHTML = `<div class="pm-title">Cambiar posición</div>`;
+  opciones.forEach(op=>{
+    const btn = document.createElement('button');
+    btn.className = 'pm-btn' + (op===jug.code?' current':'');
+    btn.textContent = lbl(op) + (op===jug.code?' ✓':'');
+    btn.onclick = ()=>{ aplicarPosMenu(op); };
+    menu.appendChild(btn);
+  });
+
+  // Posicionar menú cerca del jugador pero dentro de la pantalla
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let mx = clientX + 12, my = clientY - 20;
+  menu.style.left = '0'; menu.style.top = '0';
+  menu.classList.add('visible');
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  if(mx+mw > vw) mx = clientX - mw - 12;
+  if(my+mh > vh) my = vh - mh - 8;
+  if(my < 8) my = 8;
+  menu.style.left = mx+'px';
+  menu.style.top  = my+'px';
+}
+
+function aplicarPosMenu(newCode){
+  if(!menuJugador) return;
+  const {id, equipo, g} = menuJugador;
+  const arr = equipo==='rival' ? jugadoresRival : jugadoresMios;
+  const jug = arr.find(j=>j.id===id);
+  if(jug){
+    // Regla PO: no duplicar
+    const esPO = newCode==='PO';
+    const yaPO = arr.some(j=>j.id!==id&&j.code==='PO');
+    if(esPO&&yaPO){ cerrarMenu(); return; }
+    jug.code = newCode;
+    g.dataset.code = newCode;
+    const txts = g.querySelectorAll('text');
+    if(txts[0]) txts[0].textContent = lbl(newCode);
+    if(txts[1]) txts[1].textContent = newCode;
+    recalcFormacion(equipo);
+  }
+  cerrarMenu();
+}
+
+function cerrarMenu(){
+  document.getElementById('pos-menu').classList.remove('visible');
+  menuJugador = null;
+}
+
+
+// Cerrar menú al tocar fuera de él
+document.addEventListener('pointerdown', e=>{
+  const menu=document.getElementById('pos-menu');
+  if(menu&&menu.classList.contains('visible')&&!menu.contains(e.target)){
+    cerrarMenu();
+  }
+});
+
+/* ═══════════════════════════════════════
+   SISTEMA DE DRAG CENTRALIZADO
+   Un solo par de listeners globales en lugar
+   de uno por jugador. El touchmove solo llama
+   preventDefault() cuando hay un drag activo,
+   permitiendo scroll normal en toda la página.
+════════════════════════════════════════ */
+let dragActive=null;
+let _tapTimer=0, _hasMoved=false, _downClientX=0, _downClientY=0;
+const TAP_MS=200, TAP_PX=10;
+
+// Handlers globales — registrados UNA SOLA VEZ
+document.addEventListener('mousemove', _onMove);
+document.addEventListener('mouseup',   _onEnd);
+document.addEventListener('touchmove', _onMove, {passive:false});
+document.addEventListener('touchend',  _onEnd,  {passive:false});
+
+function _svgPos(e){
+  const svg=document.getElementById('svg-campo');
+  if(!svg) return{x:0,y:0};
+  const rect=svg.getBoundingClientRect();
+  const scX=300/rect.width, scY=500/rect.height;
+  const cx=e.touches?e.touches[0].clientX:e.clientX;
+  const cy=e.touches?e.touches[0].clientY:e.clientY;
+  return{x:(cx-rect.left)*scX, y:(cy-rect.top)*scY};
+}
+
+function _onMove(e){
+  if(!dragActive) return;          // sin drag activo → no hacer nada, scroll libre
+  e.preventDefault();              // solo bloquea scroll cuando se está arrastrando
+  const raw=e.touches?e.touches[0]:e;
+  const dx=raw.clientX-_downClientX, dy=raw.clientY-_downClientY;
+  if(Math.abs(dx)>TAP_PX||Math.abs(dy)>TAP_PX) _hasMoved=true;
+  const pos=_svgPos(e);
+  const nx=Math.max(14,Math.min(286,dragActive.startX+(pos.x-dragActive.mx)));
+  const ny=Math.max(14,Math.min(486,dragActive.startY+(pos.y-dragActive.my)));
+  dragActive.g.setAttribute('transform',`translate(${nx.toFixed(1)},${ny.toFixed(1)})`);
+  const arr=dragActive.equipo==='rival'?jugadoresRival:jugadoresMios;
+  const j=arr.find(x=>x.id===dragActive.id);
+  if(j){ j.cx=nx; j.cy=ny; recalcFormacion(dragActive.equipo); }
+}
+
+function _onEnd(e){
+  if(!dragActive) return;
+  dragActive.g.style.opacity='1';
+  // Restaurar scroll normal
+  const svg=document.getElementById('svg-campo');
+  if(svg) svg.classList.remove('dragging');
+  const elapsed=Date.now()-_tapTimer;
+  const wasTap=!_hasMoved&&elapsed<TAP_MS;
+
+  if(wasTap){
+    const raw=e.changedTouches?e.changedTouches[0]:e;
+    const gSnap=dragActive.g, eqSnap=dragActive.equipo;
+    dragActive=null;
+    mostrarMenuPos(gSnap, eqSnap, raw.clientX, raw.clientY);
+    return;
+  }
+
+  // DRAG terminado → detectar posición
+  const m=dragActive.g.getAttribute('transform').match(/translate\(([^,]+),([^)]+)\)/);
+  const nx=+m[1], ny=+m[2];
+  const eq=dragActive.equipo;
+  const id=dragActive.id;
+  const arr=eq==='rival'?jugadoresRival:jugadoresMios;
+  const jugador=arr.find(j=>j.id===id);
+  if(jugador){
+    jugador.cx=nx; jugador.cy=ny;
+    const newCode=detectarPosicion(nx,ny,eq);
+    const esPO=newCode==='PO';
+    const yaPO=arr.some(j=>j.id!==id&&j.code==='PO');
+    const codigoFinal=(esPO&&yaPO)?jugador.code:newCode;
+    jugador.code=codigoFinal;
+    dragActive.g.dataset.code=codigoFinal;
+    const txts=dragActive.g.querySelectorAll('text');
+    if(txts[0]) txts[0].textContent=lbl(codigoFinal);
+    if(txts[1]) txts[1].textContent=codigoFinal;
+    recalcFormacion(eq);
+  }
+  dragActive=null;
+}
+
+function makeDraggable(g,equipo){
+  function start(e){
+    // Si el menú está abierto para otro jugador, cerrarlo
+    if(menuJugador&&menuJugador.g!==g) cerrarMenu();
+    const raw=e.touches?e.touches[0]:e;
+    _downClientX=raw.clientX; _downClientY=raw.clientY;
+    _tapTimer=Date.now(); _hasMoved=false;
+    const m=g.getAttribute('transform').match(/translate\(([^,]+),([^)]+)\)/);
+    dragActive={g, equipo, id:g.dataset.id, startX:+m[1], startY:+m[2], mx:_svgPos(e).x, my:_svgPos(e).y};
+    g.style.opacity='0.75';
+    // Bloquear scroll del SVG mientras se arrastra
+    const svg=document.getElementById('svg-campo');
+    if(svg) svg.classList.add('dragging');
+    e.preventDefault();
+  }
+  g.addEventListener('mousedown',  start);
+  g.addEventListener('touchstart', start, {passive:false});
+}
+
+/* ═══════ RECALCULAR FORMACION ═══════
+   Usa las coordenadas Y reales de cada jugador para clasificarlo,
+   igual que detectarPosicion. Así el número siempre refleja
+   dónde está parado el jugador en el campo, no su etiqueta.
+════════════════════════════════════════ */
+function recalcFormacion(equipo){
+  const arr=equipo==='rival'?jugadoresRival:jugadoresMios;
+  const dispId=equipo==='rival'?'rival-form-display':'mio-form-display';
+  if(!arr.length){ document.getElementById(dispId).textContent='—'; return; }
+
+  const DEF_CODES=['LI','LD','DFCi','DFCd','DFC','CARi','CARd'];
+  const MC_CODES=['MI','MD','MCi','MCd','MCD','MCDi','MCDd','MO','MOi','MOd'];
+  const ATQ_CODES=['DC','DCi','DCd','SD','EXTi','EXTd'];
+
+  let def=0,mc=0,atq=0;
+  arr.forEach(j=>{
+    const c=j.code;
+    if(c==='PO') return;
+    if(DEF_CODES.includes(c)) def++;
+    else if(MC_CODES.includes(c)) mc++;
+    else if(ATQ_CODES.includes(c)) atq++;
+  });
+
+  document.getElementById(dispId).textContent=`${def}-${mc}-${atq}`;
+}
+
+/* ═══════════════════════════════════
+   BASE DE DATOS TÁCTICA
+══════════════════════════════════════ */
+const TDB={
+  '4-4-2':{
+    debS:['Espacio libre entre mediocampo y defensa','Laterales solos ante los extremos rivales','El centro se satura con 3 mediocampistas'],
+    debM:['Intervalo entre MC y DFC vulnerable','LI/LD expuestos en 1v1','Mediocampo desbordable con 3er hombre'],
+    debT:['Espacio entre 2ª y 3ª línea explotable','LI/LD en 1v1 sin cobertura central','Mediocampo saturado por pivote+2 interiores'],
+    forS:['Muy sólido en defensa','Amplitud natural por toda la banda','Fácil de mantener'],
+    forM:['Solidez con doble MC','Amplitud con LI y LD','Equilibrio entre líneas'],
+    forT:['Compactidad 2ª-3ª línea','Amplitud LI/LD','Equilibrio numérico en zona intermedia'],
+    formIdeal:'4-3-3',
+    razon:{simple:'El 4-3-3 te da un pivote extra para dominar el centro y dos extremos para explotar sus bandas vacías.',medio:'El 4-3-3 genera superioridad 3v2 en el centro y amplitud para atacar los LI/LD rivales aislados.',tec:'El 4-3-3 genera superioridad 3v2 en zona intermedia y amplitud bilateral con EXTi/EXTd para explotar LI/LD en 1v1.'},
+    keyMios:['EXTi','EXTd','MCD'],
+    dangerRival:['MCi','MCd','DCi','DCd']
+  },
+  '4-4-2r':{
+    debS:['Las bandas quedan completamente libres','Los laterales solos en 1 contra 1','2 contra 1 siempre por afuera'],
+    debM:['Bandas desprotegidas sistemáticamente','LI/LD en 1v1 permanente','Cambio de orientación explota el lado débil'],
+    debT:['Vulnerabilidad bilateral en banda por amplitud mínima','LI/LD sin cobertura de extremo','Cambio de orientación en 2 toques abre espacio opuesto'],
+    forS:['Muy fuerte por el centro','Pase rápido entre líneas','Transiciones rápidas al ataque'],
+    forM:['Superioridad numérica central','Conexión entre líneas','Transición veloz'],
+    forT:['Superioridad 3v2 en zona central','Tercer hombre entre líneas','Transición con ventaja posicional'],
+    formIdeal:'4-3-3',
+    razon:{simple:'Ve siempre por las bandas. El 4-3-3 te da extremos para atacar sus laterales solos.',medio:'El 4-3-3 explota la debilidad bilateral del rombo con EXTi/EXTd en 2v1 constante en banda.',tec:'El 4-3-3 genera superioridad bilateral en banda, explotando la vulnerabilidad estructural del rombo con EXTi/EXTd en 2v1 vs LI/LD.'},
+    keyMios:['EXTi','EXTd','LI','LD'],
+    dangerRival:['MO','MCD']
+  },
+  '4-3-3':{
+    debS:['Mucho espacio a la espalda de sus defensas','Los laterales suben y quedan expuestos','Vulnerable al balón largo al espacio'],
+    debM:['Espacio a espalda de LI/LD al adelantarse','Transición defensiva con huecos','Vulnerable al balón directo'],
+    debT:['Espacio a espalda de LI/LD en fase ofensiva','Transición defensiva con exposición en banda','Juego directo rompe la línea de presión'],
+    forS:['Presiona muy bien en campo contrario','Muchos jugadores al ataque','Muy amplio'],
+    forM:['Pressing alto coordinado','Amplitud con extremos','Verticalidad y profundidad'],
+    forT:['Pressing coordinado con 3 delanteros','Amplitud con EXTi/EXTd','Verticalidad directa'],
+    formIdeal:'4-2-3-1',
+    razon:{simple:'El 4-2-3-1 te da dos pivotes para protegerte del contraataque cuando el rival salga rápido, y un mediapunta para crear detrás de su línea de presión.',medio:'El 4-2-3-1 con doble MCD neutraliza las transiciones del 4-3-3 y el MO actúa en el espacio entre líneas.',tec:'El 4-2-3-1 neutraliza el pressing del 4-3-3 con doble MCD y genera ventaja posicional con el MO en zona 14.'},
+    keyMios:['MCDi','MCDd','MO'],
+    dangerRival:['EXTi','EXTd','DC']
+  },
+  '4-2-3-1':{
+    debS:['El mediapunta deja huecos cuando sube','Espacio libre entre los dos pivotes','El único delantero puede quedarse solo'],
+    debM:['MO deja espacio al subir','Espacio entre MCDs y banda explotable','DC aislado si los MCDs se pierden'],
+    debT:['MO genera hueco en zona intermedia al adelantarse','Intervalo entre los MCDs explotable','DC como referencia aislada'],
+    forS:['Los dos pivotes protegen muy bien','El mediapunta conecta todo','Equilibrio entre atacar y defender'],
+    forM:['Doble MCD protege la defensa','MO conecta líneas','Equilibrio estructural'],
+    forT:['Doble MCD con cobertura zonal','MO como nexo y generador','Equilibrio con pivote doble'],
+    formIdeal:'4-3-3',
+    razon:{simple:'El 4-3-3 explota los espacios que deja el mediapunta cuando sube. Tus extremos van al espacio libre.',medio:'El 4-3-3 presiona al doble MCD y explota el espacio que deja el MO rival con EXTi/EXTd.',tec:'El 4-3-3 genera pressing sobre los MCDs y explota el espacio detrás del MO con EXTi/EXTd en ruptura.'},
+    keyMios:['EXTi','EXTd','DC'],
+    dangerRival:['MO','MCDi','MCDd']
+  },
+  '4-1-4-1':{
+    debS:['El pivote solo puede quedar superado','La banda puede saturarse fácil','El delantero muy solo arriba'],
+    debM:['MCD único puede quedar superado','Banda explotable con sobrecarga','DC muy aislado'],
+    debT:['MCD único como punto de saturación','Banda explotable con MI/MD + EXTi/EXTd','DC como referencia aislada'],
+    forS:['El pivote protege muy bien','Mucha gente en el mediocampo','Compacto entre líneas'],
+    forM:['MCD como escudo defensivo','Mediocampo amplio y compacto','Compactidad entre líneas'],
+    forT:['MCD como punto de equilibrio','Amplitud con MI/MD y 4 MC','Compactidad entre líneas'],
+    formIdeal:'4-3-3',
+    razon:{simple:'El 4-3-3 satura al pivote rival con 3 mediocampistas y ataca las bandas con los extremos.',medio:'El 4-3-3 supera al MCD con 3 MC y explota las bandas con EXTi/EXTd vs MI/MD rivales.',tec:'El 4-3-3 genera saturación del MCD con MCi+MCD+MCd y superioridad bilateral con EXTi/EXTd.'},
+    keyMios:['MCi','MCd','EXTi','EXTd'],
+    dangerRival:['MI','MD','MCD']
+  },
+  '3-5-2':{
+    debS:['Por fuera de los carrileros hay mucho espacio libre','Si los carrileros suben queda 3 contra 2 atrás','Los centros laterales son peligrosos'],
+    debM:['Espacio exterior al carrilero muy amplio','CARi/CARd al frente → 3v2 defensivo','Centros laterales sin oposición exterior'],
+    debT:['Espacio a espalda del carrilero sistemático','3v2 al adelantarse CARi/CARd','Centros al espacio libre entre CAR y DFC'],
+    forS:['Muy fuerte en el medio','Los carrileros atacan y defienden','Doble delantero peligroso'],
+    forM:['Superioridad central con 5 MC','Carrileros con doble función','Doble punta'],
+    forT:['Superioridad numérica en zona intermedia','CARi/CARd con función dual','Doble punta como referencia'],
+    formIdeal:'4-4-2',
+    razon:{simple:'El 4-4-2 te da amplitud con 4 en el medio para combatir su superioridad central, y laterales para atacar fuera de sus carrileros.',medio:'El 4-4-2 con LI/LD explota el espacio exterior a los CARi/CARd rivales y equilibra el centro.',tec:'El 4-4-2 genera superioridad bilateral con LI/LD explotando el espacio exterior a CARi/CARd, y equilibra la zona central.'},
+    keyMios:['LI','LD','MI','MD'],
+    dangerRival:['MCD','MCi','MCd']
+  },
+  '3-4-3':{
+    debS:['Muy abierto atrás con solo 3 defensas','Los carrileros quedan solos si el rival es rápido','Muy expuesto al contraataque'],
+    debM:['3 DFC solos si CARi/CARd se adelantan','Vulnerabilidad en transición defensiva','Exposición alta al contraataque'],
+    debT:['3 DFC expuestos en transición si CARi/CARd avanzan','Alta vulnerabilidad al contraataque','Espacios laterales en transición defensiva'],
+    forS:['5 jugadores en ataque','Dominio ofensivo','Presión extrema'],
+    forM:['5 jugadores en ataque','Dominio ofensivo y presión','Amplitud máxima'],
+    forT:['5 jugadores en fase ofensiva','Pressing extremo con amplitud máxima','Dominio posicional en campo rival'],
+    formIdeal:'4-2-3-1',
+    razon:{simple:'El 4-2-3-1 te protege del contraataque con dos pivotes y sale rápido cuando robes para aprovechar que dejan espacios atrás.',medio:'El 4-2-3-1 neutraliza el ataque con doble MCD y explota los espacios en transición contra los 3 DFC.',tec:'El 4-2-3-1 cubre la exposición con doble MCD y genera ventaja en transición ofensiva contra los 3 DFC con el DC y EXTi/EXTd.'},
+    keyMios:['MCDi','MCDd','EXTi','EXTd'],
+    dangerRival:['EXTi','EXTd','DC']
+  },
+  '5-3-2':{
+    debS:['Casi no ataca','Los centros laterales sin presión','En el segundo tiempo se cansa'],
+    debM:['Muy reactivo, sin iniciativa','Centros laterales sin marcador exterior','Desgaste defensivo en 2º tiempo'],
+    debT:['Posicionamiento reactivo sin iniciativa','Centros laterales con bajo ángulo de presión','Desgaste defensivo progresivo en 2ª mitad'],
+    forS:['Muy difícil de meter gol','Bloque compacto y bajo','Buenos en pelota parada'],
+    forM:['Bloque bajo muy compacto','5 defensas difíciles de penetrar','Efectivos en pelota parada'],
+    forT:['Bloque bajo con 5 defensas y 3 MC compactos','Difícil penetración central','Pelota parada como arma ofensiva'],
+    formIdeal:'4-3-3',
+    razon:{simple:'El 4-3-3 presiona arriba, los extremos atacan las bandas y el delantero fija a los defensas. La paciencia y el tiro de lejos son clave.',medio:'El 4-3-3 genera amplitud con EXTi/EXTd para forzar centros laterales y el DC como rematador.',tec:'El 4-3-3 genera amplitud bilateral, centros repetitivos y tiro de media distancia para mover el bloque de 5.'},
+    keyMios:['EXTi','EXTd','DC'],
+    dangerRival:['DCi','DCd','MCD']
+  },
+  '5-4-1':{
+    debS:['Casi no ataca nunca','Se cansa en el segundo tiempo','Si lo estiras bien se abren huecos'],
+    debM:['Sin iniciativa ofensiva','Fatiga defensiva progresiva','Huecos al ocupar los 5 carriles'],
+    debT:['Ultra-reactivo sin transición ofensiva','Desgaste físico progresivo','Huecos al ocupar los 5 carriles verticales'],
+    forS:['Casi imposible de marcar','Rápidos en el contraataque','Muy buenos en corners y faltas'],
+    forM:['Bloque defensivo muy sólido','Contraataque veloz','Pelota parada efectiva'],
+    forT:['Bloque con 9-10 defensores','Transición ofensiva en 3-4 toques','Pelota parada como mecanismo primario'],
+    formIdeal:'3-5-2',
+    razon:{simple:'El 3-5-2 te da amplitud y profundidad para estirar el bloque. Los carrileros atacan por fuera y los delanteros rematan centros.',medio:'El 3-5-2 ocupa los 5 carriles verticales para estirar el bloque bajo y genera superioridad con CARi/CARd.',tec:'El 3-5-2 ocupa los 5 carriles verticales para estirar el bloque de 9 y genera centros desde los CARi/CARd.'},
+    keyMios:['CARi','CARd','DCi','DCd'],
+    dangerRival:['DC','MI','MD']
+  },
+  '4-5-1':{
+    debS:['No mete muchos goles','Le cuesta atacar con mucha gente','Vulnerable si presionas arriba'],
+    debM:['Bajo potencial goleador','Poca profundidad ofensiva','Vulnerable a pressing en su salida'],
+    debT:['Bajo potencial goleador estructural','Poca profundidad con un DC','Pressing eficaz contra su salida'],
+    forS:['Muy difícil de jugar por el centro','Roba el balón muy bien','Contraataque con mucha gente'],
+    forM:['Mediocampo de 5 impenetrable','Alta recuperación','Contraataque veloz'],
+    forT:['Mediocampo de 5 con cobertura zonal total','Alta tasa de recuperación','Transición ofensiva con ventaja numérica'],
+    formIdeal:'4-3-3',
+    razon:{simple:'El 4-3-3 presiona arriba para que no salgan cómodos y los extremos atacan por fuera de su mediocampo de 5.',medio:'El 4-3-3 con pressing alto fuerza el error en la salida del rival y explota el espacio con EXTi/EXTd.',tec:'El 4-3-3 genera pressing coordinado en la salida del rival y supera el mediocampo de 5 con EXTi/EXTd en ruptura.'},
+    keyMios:['EXTi','EXTd','MCD'],
+    dangerRival:['MI','MD','MCi','MCd']
+  }
+};
+
+/* ═══════ ESTRATEGIA POR FORTALEZA ═══════ */
+const SUP_STRAT={
+  velocidad:{
+    simple:{'presion-alta':"Manda el balón al espacio detrás de su defensa antes de que presionen. Tus extremos rápidos son tu arma número uno.",'bloque-medio':"Circula el balón y cuando abras un espacio, entra rápido. El cambio de ritmo te favorece.",'bloque-bajo':"Ármate de paciencia. Cuando suban a presionar, sal veloz al espacio vacío que dejan.",'contraataque':"Cuando robes, ataca directo al arco. 3 o 4 toques máximo. La velocidad es tu ventaja.",'posesion':"Circula para cansarlos y cuando suelten el bloque, entra al espacio con tus extremos.",'juego-directo':"Pelea el juego aéreo pero cuando caigas el balón, sal rápido. Tu velocidad gana la segunda pelota."},
+    medio:{'presion-alta':"Balón al espacio a espalda de LI/LD anticipando el pressing. EXTi/EXTd en ruptura diagonal.",'bloque-medio':"Circulación + cambio de ritmo → EXTi/EXTd al espacio liberado. 2v1 en banda.",'bloque-bajo':"DC fija la defensa → espacio lateral para EXTi/EXTd en arrancada.",'contraataque':"Transición directa en 3 toques. EXTi/EXTd en ruptura. MCD cubre.",'posesion':"Circulación para atraer → cambio de ritmo → EXTi/EXTd al espacio generado.",'juego-directo':"Segunda pelota + salida rápida. EXTi/EXTd en transición."},
+    tec:{'presion-alta':"Pase en profundidad anticipando la línea de pressing. EXTi/EXTd en carrera de ruptura diagonal al espacio.",'bloque-medio':"Circulación lateral → desplazamiento del bloque → sobrepaso de EXTi/EXTd.",'bloque-bajo':"DC como fijador → liberación de EXTi/EXTd en el espacio lateral generado.",'contraataque':"Transición ofensiva en 3 toques máximo. EXTi/EXTd como vector principal. MCD como cobertura.",'posesion':"Atracción → Fijación → Cambio de orientación → Explotación con EXTi/EXTd.",'juego-directo':"Segunda jugada + transición rápida. EXTi/EXTd en ruptura desde la segunda pelota."}
+  },
+  posesion:{
+    simple:{'presion-alta':"No te dejes presionar. El portero ayuda a salir. 3 contra 2 siempre disponible en la salida.",'bloque-medio':"Mueve el balón de lado a lado hasta que se abra un espacio. El que se filtra entre sus líneas es el peligroso.",'bloque-bajo':"Paciencia total. Mueve el bloque con circulación. El tiro de media distancia puede abrir el partido.",'contraataque':"Sé paciente y no pierdas el balón en zonas malas. Cuando avancen, contraataca con calidad.",'posesion':"El que tenga más calidad técnica va a dominar. Busca el tercer hombre que rompe entre líneas.",'juego-directo':"El rival va a pelear duelos físicos. Juega al suelo y circula para sacarlo de su zona fuerte."},
+    medio:{'presion-alta':"Salida limpia con apoyo del PO. 3v2 en salida. Llegar al MCD libre entre las presiones.",'bloque-medio':"Circulación para desplazar el bloque + tercer hombre entre MO y DFC.",'bloque-bajo':"Posesión para mover el bloque. MO entre líneas como receptor clave.",'contraataque':"Posesión sin riesgo en zona propia. Subir al ataque de forma ordenada.",'posesion':"Partido de MCD. Tercer hombre como diferencia.",'juego-directo':"Circulación técnica para neutralizar su juego físico. Posesión como escudo."},
+    tec:{'presion-alta':"Salida en 3v2 con PO. Romper línea de presión con pase vertical al MCD libre.",'bloque-medio':"Circulación → desplazamiento del bloque → tercer hombre en zona entre MC y DFC.",'bloque-bajo':"Posesión → DC como fijador → MO entre líneas → pared o desmarque.",'contraataque':"Posesión controlada sin exposición en zona intermedia. Estructurar el ataque.",'posesion':"Control territorial. MCD como eje. Tercer hombre en zona 14.",'juego-directo':"Circulación técnica para neutralizar los duelos. Posesión como mecanismo de control."}
+  },
+  aereo:{
+    simple:{'presion-alta':"Cuando te presionen, manda el balón al delantero alto. Segunda pelota = tu oportunidad.",'bloque-medio':"Centra desde la banda con el delantero esperando. También desde faltas.",'bloque-bajo':"Centra mucho. Los corners son tus mejores oportunidades. El segundo palo libre.",'contraataque':"Cuando recuperes, pega largo al delantero. Si gana el balón, todo el mundo arriba.",'posesion':"Cuando te canses de circular, centra. Su defensa alta es vulnerable al balón en el área.",'juego-directo':"Los dos equipos van a pelear lo aéreo. El que gane más segundas pelotas va a dominar."},
+    medio:{'presion-alta':"Balón largo al DC como referencia aérea. Segunda jugada con MC llegando.",'bloque-medio':"Centros laterales con DC y llegada de MCi/MCd. Faltas laterales.",'bloque-bajo':"Centros continuos + corners. DC con llegada de MCi/MCd al remate.",'contraataque':"Pelota larga al DC tras recuperación. Segunda jugada con MC.",'posesion':"Circulación → Centro → DC como rematador. Defensa alta = espacio aéreo.",'juego-directo':"Pelea lo aéreo + segunda pelota. MC llega al remate."},
+    tec:{'presion-alta':"Juego directo al DC como referencia aérea. Segunda jugada con MCi/MCd llegando.",'bloque-medio':"Centros laterales con DC y llegada de MCi/MCd. Faltas directas.",'bloque-bajo':"Centros repetitivos + corners con DFC al 2º palo. 2ª jugada sistemática.",'contraataque':"Pelota larga al DC + segunda jugada con MC. Superioridad aérea en área.",'posesion':"Posesión → Centro lateral → DC como rematador. Defensa alta → vulnerabilidad aérea.",'juego-directo':"Duelo aéreo + segunda pelota. MC llega desde 2ª línea."}
+  },
+  presion:{
+    simple:{'presion-alta':"Los dos equipos presionan fuerte. El que cometa el primer error, paga caro. Concentración total.",'bloque-medio':"Presiónalo antes de que acomoden el balón. No le des tiempo de organizarse.",'bloque-bajo':"Presionar un bloque muy bajo es difícil. Mejor bloque medio y esperar el error rival.",'contraataque':"Presiona arriba para que no salgan rápido. Si recuperas alto, el arco está cerca.",'posesion':"Persíguelos hasta que fallen. El pressing bien coordinado crea goles.",'juego-directo':"Presiona al central cuando quiera pegarla larga. Si la ganas arriba, el arco está cerca."},
+    medio:{'presion-alta':"Choque de pressing. El error en la salida se paga caro. Concentración en la transición.",'bloque-medio':"Pressing coordinado para forzar el error antes de que organicen la salida.",'bloque-bajo':"Pressing alto poco efectivo. Bloque medio + pressing en la salida rival.",'contraataque':"Pressing para cortar su salida rápida + aprovechar balón recuperado alto.",'posesion':"Pressing coordinado como arma principal. Recuperar alto = ataque inmediato.",'juego-directo':"Pressing al central cuando prepara el balón largo. Recuperación alta."},
+    tec:{'presion-alta':"Duelo de pressing. Trampa en la salida. Error = gol.",'bloque-medio':"Pressing coordinado antes de la organización rival + gegenpressing tras pérdida.",'bloque-bajo':"Pressing alto ineficaz. Bloque medio + pressing focalizado en la salida.",'contraataque':"Pressing para neutralizar la transición + gegenpressing inmediato.",'posesion':"Pressing como mecanismo de recuperación + gegenpressing = ventaja posicional.",'juego-directo':"Pressing al DFC en preparación del balón largo. Recuperación en altura."}
+  },
+  fisico:{
+    simple:{'presion-alta':"Partido muy intenso. Guarda energía en el primer tiempo y ataca en el segundo cuando se cansen.",'bloque-medio':"Juega técnico, no pelees físicamente. El balón rápido evita el contacto.",'bloque-bajo':"Manda el balón alto al área. Tu físico puede ganar los duelos aéreos.",'contraataque':"Aguanta el físico en el primer tiempo. En el segundo, cuando se cansen, arriésgate.",'posesion':"Juega al balón, no permitas el contacto físico. La técnica gana al músculo.",'juego-directo':"Los dos equipos quieren pelear físicamente. El que aguante más va a ganar."},
+    medio:{'presion-alta':"Partido físico e intenso. Gestión del desgaste. Aprovechar en el 2º tiempo.",'bloque-medio':"Juego combinativo para evitar duelos físicos. Circulación para cansarlos.",'bloque-bajo':"Juego aéreo y físico. Centros con llegada al área.",'contraataque':"Primer tiempo físico. Aprovechar el desgaste en el 2º tiempo.",'posesion':"Posesión para evitar el contacto. Técnica como antídoto al físico.",'juego-directo':"Duelo físico igualado. El que gane más pelotazos y segundas pelotas domina."},
+    tec:{'presion-alta':"Alta intensidad física. Gestión del desgaste muscular. 2ª parte como ventana.",'bloque-medio':"Juego técnico y combinativo para neutralizar la superioridad física en duelos.",'bloque-bajo':"Juego aéreo como arma. Centros laterales con DFC y DC al área.",'contraataque':"Partido físico igualado en 1ª parte. Fatiga rival en 2ª mitad.",'posesion':"Posesión como antídoto al juego físico. Circulación técnica.",'juego-directo':"Duelo físico bilateral. Segunda pelota como diferenciador. Quién gana más pelotazos domina."}
+  },
+  transicion:{
+    simple:{'presion-alta':"Cuando recuperes, hazlo rápido antes de que vuelvan. 3 toques máximo para llegar al arco.",'bloque-medio':"Aguanta en bloque y cuando robes, sal rápido por las bandas.",'bloque-bajo':"Espera tranquilo. Cuando lleguen al área, roba y sal volando al contraataque.",'contraataque':"Los dos van a esperar. El que cometa el primer error defensivo pierde.",'posesion':"Cuando pierdas el balón, vuelve muy rápido. El rival va a aprovechar el espacio.",'juego-directo':"Gana la segunda pelota y transita rápido antes de que reorganicen."},
+    medio:{'presion-alta':"Recuperación alta + transición inmediata antes de que reorganicen.",'bloque-medio':"Bloque compacto + transición veloz en 3-4 toques al recuperar.",'bloque-bajo':"Bloque bajo + transición rápida con EXTi/EXTd en amplitud.",'contraataque':"Partido de transiciones. El primer error decide. MCD como eje.",'posesion':"Recuperación + contraataque antes de que el rival reorganice. 3-4 toques.",'juego-directo':"Segunda pelota + transición directa. MCD como lanzador."},
+    tec:{'presion-alta':"Recuperación alta + verticalización inmediata. Ventaja posicional directa.",'bloque-medio':"Bloque medio + transición en 3 toques máximo con EXTi/EXTd.",'bloque-bajo':"Bloque bajo + transición con amplitud bilateral y DC como referencia.",'contraataque':"Transiciones como diferenciador. MCD como pivote de cobertura y lanzamiento.",'posesion':"Transición directa sin pausa. 3 toques desde recuperación a remate.",'juego-directo':"Segunda pelota como trigger de transición. 3 toques máximo."}
+  }
+};
+
+const ALERTAS={
+  'dc-alto':{s:"⚠️ Su delantero es alto y cabecean muy bien. Pon al defensor más fuerte a marcarlo.",m:"⚠️ DC alto y cabeceador. Marcaje específico con DFC más alto. Atención en pelota parada.",t:"⚠️ DC con superioridad aérea. Marcaje individual del DFC más alto. Atención en centros y pelota parada."},
+  'dc-rapido':{s:"⚠️ Su delantero es muy rápido. La defensa debe estar muy atenta a los balones en profundidad.",m:"⚠️ DC veloz. Línea defensiva más baja para evitar el espacio a la espalda.",t:"⚠️ DC con ventaja de velocidad. Línea defensiva profunda. Evitar el espacio a espalda de los DFC."},
+  'dc-tecnico':{s:"⚠️ Su delantero es muy técnico. No le dejes girar de cara a la portería.",m:"⚠️ DC técnico. El DFC más cercano debe evitar que reciba de espaldas y gire.",t:"⚠️ DC con superioridad técnica. Marcaje cercano para evitar el giro. Anticipación en el primer toque."},
+  'dos-puntas':{s:"⚠️ Sus dos delanteros son peligrosos. Necesitas dos defensas centrales atentos siempre.",m:"⚠️ Doble punta peligrosa. DFCi/DFCd en marcaje estricto. Atención en centros y pelota parada.",t:"⚠️ Doble punta con alta densidad de remate. DFCi/DFCd en marcaje individual. Máxima atención en centros."},
+  'ext-rapidos':{s:"⚠️ Sus extremos son muy rápidos. No dejes a los laterales solos. Baja la línea defensiva.",m:"⚠️ EXTi/EXTd veloces. Apoyo de MC al LI/LD. Línea defensiva más baja.",t:"⚠️ EXTi/EXTd con ventaja de velocidad. LI/LD con apoyo de MC. Línea más profunda."},
+  'ext-habil':{s:"⚠️ Sus extremos son muy habilidosos. Pon apoyo al lateral para que no quede solo.",m:"⚠️ EXTi/EXTd técnicos. Apoyo de MC al LI/LD. Evitar el 1v1 aislado.",t:"⚠️ EXTi/EXTd con superioridad técnica. Apoyo de MC al LI/LD. Evitar el 1v1."},
+  'ext-cortan':{s:"⚠️ Sus extremos se meten hacia el centro. Cuidado con el tiro desde fuera del área.",m:"⚠️ EXTi/EXTd que cortan al interior. Riesgo de tiro de media distancia. El MC debe cerrar ese espacio.",t:"⚠️ EXTi/EXTd con movimiento cortante al interior. Alto riesgo de tiro de media distancia. MCi/MCd debe cerrar el carril interior."},
+  'ext-centran':{s:"⚠️ Sus extremos centran mucho. Cuidado con los balones al área. Defensa atenta al segundo palo.",m:"⚠️ EXTi/EXTd con alta frecuencia de centro lateral. DFC en alerta al segundo palo.",t:"⚠️ EXTi/EXTd como generadores de centros. DFC en marcaje de zona en el segundo palo. Anticipar el rechace."},
+  'mediapunta':{s:"⚠️ Su mediapunta es el que crea todo. Ponle un mediocampista pegado todo el tiempo.",m:"⚠️ MCO creativo. Marcaje específico de MCi o MCd. Neutralizarlo corta el juego rival.",t:"⚠️ MCO como generador principal. Marcaje específico de MCi/MCd. Reducir espacio en zona 14."},
+  'pivote-fuerte':{s:"⚠️ Su pivote es muy difícil de superar. Juega a sus lados, no de frente.",m:"⚠️ MCD muy fuerte. Jugar por bandas o sobre él. Tercer hombre en zona 14.",t:"⚠️ MCD con superioridad en duelos. Juego en periferia del MCD. Tercer hombre como alternativa."},
+  'doble-pivote':{s:"⚠️ Tienen dos pivotes muy sólidos. El centro está muy cerrado. Ataca por las bandas.",m:"⚠️ Doble MCD muy sólido. El juego central directo es ineficaz. Amplitud y banda como alternativa.",t:"⚠️ Doble MCD con alta compactidad en zona intermedia. El juego interior directo no tiene salida. Amplitud bilateral y tercer hombre por fuera del bloque."},
+  'mc-llegada':{s:"⚠️ Un mediocampista llega siempre al área. Hay que marcarlo cuando entre.",m:"⚠️ MC con llegada al área. El DFC más libre debe anticipar su llegada.",t:"⚠️ MC con incorporación sistemática al área. El DFC no marcador debe anticipar la llegada y hacer el seguimiento."},
+  'mc-box2box':{s:"⚠️ Tienen un mediocampista que corre todo el partido. Es difícil de parar.",m:"⚠️ Medio box-to-box: alto trabajo físico y presencia en ambas áreas. Seguimiento constante.",t:"⚠️ Medio box-to-box con alta cobertura de espacio y presencia bilateral. Seguimiento con rotación para no desgastar."},
+  'lat-d-sube':{s:"✅ Su lateral derecho sube mucho. Cuando lo haga, queda espacio detrás. ¡Atácalo!",m:"✅ LD ofensivo. Espacio a su espalda explotable con EXTi en ruptura.",t:"✅ LD con posición adelantada frecuente. Espacio a espalda explotable con EXTi."},
+  'lat-i-sube':{s:"✅ Su lateral izquierdo sube mucho. Cuando lo haga, queda espacio libre.",m:"✅ LI ofensivo. Espacio a su espalda explotable con EXTd en arrancada.",t:"✅ LI con posición adelantada. Espacio explotable con EXTd en ruptura diagonal."},
+  'lat-defensivos':{s:"⚠️ Sus laterales no suben. Tus extremos van a tener que trabajar mucho para crear peligro.",m:"⚠️ Laterales muy defensivos. Los EXTi/EXTd propios necesitarán superioridad de otro jugador para generar peligro.",t:"⚠️ Laterales con posicionamiento defensivo estricto. Los EXTi/EXTd propios no generarán ventaja 1v1. Requieren apoyo de LI/LD para generar 2v1."},
+  'carrileros':{s:"⚠️ Sus carrileros suben y bajan todo el tiempo. Son muy peligrosos por la banda.",m:"⚠️ Carrileros de ida y vuelta: muy activos en banda. Doble esfuerzo para los LI/LD propios.",t:"⚠️ Carrileros con función dual ofensiva/defensiva. Presión sobre LI/LD propios en banda. Apoyo de MC para generar 2v1."},
+  'def-alta':{s:"✅ Su defensa está muy subida. Manda el balón largo y que tu delantero corra.",m:"✅ Línea defensiva alta. Carrera de ruptura del DC/EXTi/EXTd.",t:"✅ Línea defensiva adelantada. Pase en profundidad al DC o EXTi/EXTd en ruptura diagonal."},
+  'def-lenta':{s:"✅ Sus defensores son lentos. Pon extremos rápidos y mándalos al espacio.",m:"✅ DFC lentos. EXTi/EXTd en ruptura. Variaciones de ritmo para explotar la lentitud.",t:"✅ DFC con limitación de velocidad. EXTi/EXTd en ruptura diagonal. Cambio de ritmo."},
+  'def-agresiva':{s:"⚠️ Sus defensas son muy agresivos. Cuidado con los balones divididos, son duros.",m:"⚠️ Defensa agresiva. Evitar los duelos físicos directos. Juego al primer toque para no exponerse.",t:"⚠️ Defensa con alta agresividad en el duelo. Evitar los balones divididos y el primer toque largo. Juego combinativo rápido para neutralizar la agresividad."},
+  'zonal':{s:"⚠️ Marcan en zona. Muévete mucho para sacarlos de su posición.",m:"⚠️ Marca en zona estricta. Movimientos sin balón para generar desajustes en el bloque.",t:"⚠️ Marcaje zonal estricto. Movimientos sin balón coordinados para generar desajustes y crear ventaja posicional."},
+  'individual':{s:"✅ Marcan individualmente. Si tus jugadores se mueven mucho, el marcador tiene que seguirlos y deja espacios.",m:"✅ Marca individual. Movimientos de arrastre del DC para sacar al DFC de posición y crear espacio.",t:"✅ Marcaje individual. Movimientos de arrastre del DC o SD para descolocar al DFC y generar espacio para el tercer hombre."},
+  'portero-sale':{s:"✅ El portero sale mal. Centra al punto de penalti y prueba el tiro desde lejos.",m:"✅ PO sale mal. Centro al punto de penalti + llegada al 2º palo.",t:"✅ PO con debilidad en salida. Centro al espacio entre PO y defensa. Tiro de media distancia."},
+  'portero-pie':{s:"⚠️ Su portero juega muy bien con el pie. No le presiones demasiado porque puede salir jugando.",m:"⚠️ PO bueno con el pie. Pressing sin sobrecarga para no dejar espacio a su espalda.",t:"⚠️ PO con alta capacidad de construcción desde atrás. Pressing dosificado para no exponer el espacio a su espalda."},
+  'equipo-fisico':{s:"⚠️ Son muy fuertes físicamente. Juega técnico, no pelees. El balón rápido es tu aliado.",m:"⚠️ Equipo físico. Juego técnico y combinativo. Circulación rápida para evitar duelos.",t:"⚠️ Superioridad física rival. Juego técnico y combinativo para neutralizar los duelos directos."},
+  'desgastado':{s:"✅ Están cansados. Presiónales fuerte desde el principio para que cometan errores.",m:"✅ Desgaste físico rival. Pressing alto desde el inicio.",t:"✅ Desgaste físico adversario. Pressing alto intensivo desde los primeros minutos."},
+  'pelota-parada':{s:"⚠️ Son muy peligrosos en pelota parada. Máxima atención en faltas y córners.",m:"⚠️ Peligrosos en pelota parada. Marcar a los más altos y cubrir el segundo palo.",t:"⚠️ Alta efectividad en jugadas de balón parado. Marcaje mixto sobre los rematadores + cobertura del segundo palo y rechace."},
+  'pressing-alto':{s:"⚠️ Presionan muy arriba. La salida limpia es clave. El portero tiene que ayudar.",m:"⚠️ Pressing alto coordinado. Salida limpia con apoyo del PO. 3v2 en salida siempre disponible.",t:"⚠️ Pressing alto coordinado. Salida en superioridad 3v2 con PO. Pase vertical al MCD libre para romper la línea de presión."},
+  'bloque-bajo':{s:"⚠️ Se cierran mucho atrás. Necesitas paciencia y tiro de lejos para abrirlos.",m:"⚠️ Bloque bajo rival. Posesión para moverlos + tiro de media distancia para forzar el rechace.",t:"⚠️ Bloque bajo con alta densidad defensiva. Posesión para desplazar el bloque + tiro de media distancia como mecanismo de rechace + 2ª jugada."},
+  'salida-limpia':{s:"⚠️ Salen jugando muy bien. No presiones solo, hazlo con varios jugadores coordinados.",m:"⚠️ Buena salida de balón. Pressing coordinado de mínimo 2 jugadores para evitar que salgan cómodos.",t:"⚠️ Alta capacidad de construcción desde atrás. Pressing coordinado con trampa en la salida. Evitar el pressing individual que les da espacio."}
+};
+
+/* ═══════ CAMPO RESULTADO — usa estado VIVO ═══════ */
+function generarCampoResultado(formRival,formMia,keyMios,dangerRival){
+  let jugsRival='',jugsMios='';
+  const R=15,RK=17;
+
+  /* RIVAL — prioriza lo que el usuario dibujó en la pizarra */
+  const srcRival=jugadoresRival.length
+    ?jugadoresRival.map(j=>({code:j.code,cx:j.cx,cy:j.cy}))
+    :(FORM_POS[formRival]?.rival||[]).map(([c,x,y])=>({code:c,cx:x,cy:y}));
+
+  srcRival.forEach(({code,cx,cy})=>{
+    const ok=dangerRival.some(d=>code===d||code.slice(0,3)===d.slice(0,3));
+    const cf=ok?'#6e0a0a':'#0d3820';
+    const cs=ok?'#e8403a':'#2ecc71';
+    const sw=ok?'2.5':'1.5';
+    const tf=ok?'#ffaaaa':'#ffffff';
+    const lf=ok?'#ff6060':'rgba(255,255,255,.6)';
+    const label=ok?`▲ ${code}`:code;
+    const t=LMAP[LANG][code]||code;
+    jugsRival+=`<g>
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="${cf}" stroke="${cs}" stroke-width="${sw}"/>
+      <text x="${cx}" y="${cy+0.6}" font-family="Arial Narrow,Arial,sans-serif" font-size="9" font-weight="800" fill="${tf}" text-anchor="middle" dominant-baseline="middle">${t}</text>
+      <text x="${cx}" y="${cy+R+3}" font-family="Arial Narrow,Arial,sans-serif" font-size="7" font-weight="700" fill="${lf}" text-anchor="middle" dominant-baseline="hanging">${label}</text>
+    </g>`;
+  });
+
+  /* PROPIO — usa SIEMPRE el preset de la formación ideal recomendada,
+     no lo que el usuario dibujó en la pizarra. El objetivo es mostrar
+     exactamente cómo quedaría su equipo con la formación propuesta. */
+  const srcMio=(FORM_POS[formMia]?.propio||[]).map(([c,x,y])=>({code:c,cx:x,cy:y}));
+
+  srcMio.forEach(({code,cx,cy})=>{
+    const ok=keyMios.some(k=>code===k||code.slice(0,3)===k.slice(0,3));
+    const cf=ok?'#6b4400':'#0d1e60';
+    const cs=ok?'#f5c842':'#4a90e8';
+    const sw=ok?'2.5':'1.5';
+    const tf=ok?'#ffe580':'#ffffff';
+    const lf=ok?'#f5c842':'rgba(255,255,255,.6)';
+    const label=ok?`★ ${code}`:code;
+    const r=ok?RK:R;
+    const t=LMAP[LANG][code]||code;
+    jugsMios+=`<g>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="${cf}" stroke="${cs}" stroke-width="${sw}"/>
+      <text x="${cx}" y="${cy+0.6}" font-family="Arial Narrow,Arial,sans-serif" font-size="9" font-weight="800" fill="${tf}" text-anchor="middle" dominant-baseline="middle">${t}</text>
+      <text x="${cx}" y="${cy+r+3}" font-family="Arial Narrow,Arial,sans-serif" font-size="7" font-weight="700" fill="${lf}" text-anchor="middle" dominant-baseline="hanging">${label}</text>
+    </g>`;
+  });
+
+  return `<svg viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;border-radius:10px;overflow:hidden;">
+  <defs>
+    <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d4020"/><stop offset="50%" stop-color="#0a3518"/><stop offset="100%" stop-color="#0d4020"/>
+    </linearGradient>
+  </defs>
+  <rect width="300" height="500" fill="url(#gr)"/>
+  <rect x="0" y="0"   width="300" height="56" fill="rgba(255,255,255,.03)"/>
+  <rect x="0" y="112" width="300" height="56" fill="rgba(255,255,255,.03)"/>
+  <rect x="0" y="224" width="300" height="56" fill="rgba(255,255,255,.03)"/>
+  <rect x="0" y="336" width="300" height="56" fill="rgba(255,255,255,.03)"/>
+  <rect x="0" y="448" width="300" height="52" fill="rgba(255,255,255,.03)"/>
+  <rect x="8" y="8" width="284" height="484" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.5" rx="2"/>
+  <line x1="8" y1="250" x2="292" y2="250" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+  <circle cx="150" cy="250" r="38" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+  <circle cx="150" cy="250" r="3.5" fill="rgba(255,255,255,.7)"/>
+  <rect x="50" y="8" width="200" height="66" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+  <rect x="98" y="8" width="104" height="27" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.2"/>
+  <rect x="115" y="1" width="70" height="11" fill="rgba(255,80,60,.25)" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/>
+  <circle cx="150" cy="60" r="3" fill="rgba(255,255,255,.55)"/>
+  <rect x="50" y="426" width="200" height="66" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+  <rect x="98" y="465" width="104" height="27" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.2"/>
+  <rect x="115" y="488" width="70" height="11" fill="rgba(60,120,255,.25)" stroke="rgba(255,255,255,.7)" stroke-width="1.5"/>
+  <circle cx="150" cy="440" r="3" fill="rgba(255,255,255,.55)"/>
+  <text x="150" y="138" font-family="Arial Narrow,Arial,sans-serif" font-size="10" font-weight="700" fill="rgba(255,120,80,.4)" text-anchor="middle" letter-spacing="3">RIVAL</text>
+  <text x="150" y="370" font-family="Arial Narrow,Arial,sans-serif" font-size="10" font-weight="700" fill="rgba(80,150,255,.4)" text-anchor="middle" letter-spacing="2">TU EQUIPO</text>
+  ${jugsRival}${jugsMios}
+  </svg>`;
+}
+
+/* ═══════ ANALIZAR DT ═══════ */
+/* ═══════════════════════════════════════════════════
+   MOTOR DE ANÁLISIS ESTRUCTURAL
+   Lee las posiciones REALES del rival en la pizarra
+   y genera diagnóstico según la combinación exacta.
+   Un 4-4-2 con 2MCD+2MCO es radicalmente distinto
+   a un 4-4-2 con MI+MCD+MCO+MD.
+═══════════════════════════════════════════════════ */
+function analizarEstructura(jugadores){
+  // Contar cada tipo de posición
+  const cnt={};
+  jugadores.forEach(j=>{
+    const c=j.code;
+    cnt[c]=(cnt[c]||0)+1;
+  });
+
+  // Detectar bloques
+  const nMCD=(cnt['MCD']||0)+(cnt['MCDi']||0)+(cnt['MCDd']||0);
+  const nMCO=(cnt['MO']||0)+(cnt['MOi']||0)+(cnt['MOd']||0);
+  const nMI=(cnt['MI']||0), nMD=(cnt['MD']||0);
+  const nMCi=(cnt['MCi']||0), nMCd=(cnt['MCd']||0);
+  const nEXTi=(cnt['EXTi']||0), nEXTd=(cnt['EXTd']||0);
+  const nDC=(cnt['DC']||0)+(cnt['DCi']||0)+(cnt['DCd']||0);
+  const nSD=(cnt['SD']||0);
+  const nLI=(cnt['LI']||0), nLD=(cnt['LD']||0);
+  const nDFC=(cnt['DFCi']||0)+(cnt['DFCd']||0)+(cnt['DFC']||0);
+  const nCAR=(cnt['CARi']||0)+(cnt['CARd']||0);
+  const nDEF=nDFC+nLI+nLD+nCAR;
+  const nMC=nMCD+nMCO+nMI+nMD+nMCi+nMCd;
+  const nATQ=nDC+nSD+nEXTi+nEXTd;
+
+  // Identificar VARIANTE táctica del mediocampo
+  let varianteMC='';
+  if(nMCD>=2&&nMCO>=1) varianteMC='doble-pivote-con-mco';
+  else if(nMCD>=2&&nMCO===0) varianteMC='doble-pivote-puro';
+  else if(nMCD===1&&nMCO>=1&&nMI===0&&nMD===0) varianteMC='pivote-mediapunta';
+  else if(nMCD===1&&(nMI>=1||nMD>=1)&&nMCO===0) varianteMC='pivote-con-bandas';
+  else if(nMCD===0&&nMCO>=2) varianteMC='doble-mco';
+  else if(nMCD===0&&nMCO===1) varianteMC='solo-mco';
+  else if(nMCi>=1&&nMCd>=1&&nMCD>=1) varianteMC='triangulo-medios';
+  else if(nMI>=1&&nMD>=1&&nMCO>=1) varianteMC='carrileros-con-mco';
+  else if(nMI>=1&&nMD>=1&&nMCD>=1) varianteMC='carrileros-con-pivote';
+  else varianteMC='mediocampo-estandar';
+
+  // Identificar VARIANTE de ataque
+  let varianteAtq='';
+  if(nDC>=2&&nSD===0&&nEXTi===0&&nEXTd===0) varianteAtq='doble-punta-pura';
+  else if(nDC===1&&nSD>=1) varianteAtq='dc-con-sd';
+  else if(nDC===1&&nEXTi>=1&&nEXTd>=1) varianteAtq='dc-con-extremos';
+  else if(nDC===1&&nEXTi===0&&nEXTd===0) varianteAtq='punta-sola';
+  else if(nDC===0&&(nEXTi>=1||nEXTd>=1)) varianteAtq='sin-punta-extremos';
+  else varianteAtq='ataque-mixto';
+
+  // Identificar VARIANTE defensiva
+  let varianteDef='';
+  if(nCAR>=2) varianteDef='tres-centrales-carrileros';
+  else if(nDFC>=3&&nLI===0&&nLD===0) varianteDef='tres-centrales-puros';
+  else if(nDFC>=2&&nLI>=1&&nLD>=1) varianteDef='cuatro-defensas';
+  else if(nDFC>=2&&(nLI+nLD+nCAR)>=3) varianteDef='cinco-defensas';
+  else varianteDef='defensa-estandar';
+
+  return {cnt,nMCD,nMCO,nMI,nMD,nMCi,nMCd,nEXTi,nEXTd,nDC,nSD,nDEF,nMC,nATQ,nLI,nLD,nDFC,nCAR,
+          varianteMC,varianteAtq,varianteDef,formStr:`${nDEF}-${nMC}-${nATQ}`};
+}
+
+function generarAnalisisEstructural(est, L){
+  const lineas=[];
+  const tip=(s,m,t)=>L==='simple'?s:L==='medio'?m:t;
+
+  // ── ANÁLISIS MEDIOCAMPO ──
+  switch(est.varianteMC){
+    case 'doble-pivote-con-mco':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Tienen dos pivotes defensivos y un mediapunta creativo. El mediocampo rival es muy sólido atrás pero tiene un jugador que conecta arriba.',
+        'Doble MCD + MCO: el mediocampo rival tiene blindaje defensivo pero el MCO es su creador. Neutralizar al MCO corta su juego.',
+        'Estructura 2MCD+MCO: alta cobertura defensiva con pivote doble. El MCO actúa como tercer hombre entre líneas. Neutralizarlo es prioritario.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'Los dos pivotes dejan poco espacio entre ellos, pero por las bandas hay espacio libre para atacar.',
+        'El doble pivote genera espacio en banda. Explotar los laterales con EXTi/EXTd o carrileros.',
+        'El doble MCD compacta el centro pero genera espacio exterior. Ataque bilateral con EXTi/EXTd para forzar la salida del bloque.')});
+      break;
+    case 'doble-pivote-puro':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Dos pivotes defensivos puros. El centro del campo está muy cerrado. No intentes jugar por el medio.',
+        'Doble MCD puro: el centro está blindado. Evitar el juego central directo.',
+        'Estructura 2MCD sin MCO: máxima compactidad en zona intermedia. El juego interior directo es ineficaz.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'Con tanto medio defensivo, arriba tienen pocos jugadores. Tus defensas pueden subir más tranquilos.',
+        'Poca presencia ofensiva rival. Los defensas propios pueden incorporarse con más libertad.',
+        'Baja densidad ofensiva. LI/LD o CARi/CARd pueden incorporarse sin riesgo excesivo de contraataque.')});
+      break;
+    case 'pivote-mediapunta':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Tienen un pivote que protege y un mediapunta que crea. El mediapunta es el más peligroso.',
+        'MCD + MCO: el pivote libera al MCO para crear. El MCO es la clave del juego rival.',
+        'Estructura MCD+MCO: el MCD libera al MCO de responsabilidades defensivas. El MCO opera como generador principal sin presión.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'Si marcas de cerca al mediapunta, el pivote no sabe crear. Su ataque se apaga.',
+        'Anular al MCO apaga su juego ofensivo. El MCD solo no genera peligro.',
+        'Neutralizar al MCO elimina su vector ofensivo. El MCD carece de capacidad generadora.')});
+      break;
+    case 'carrileros-con-mco':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Juegan con medios que suben por las bandas y un mediapunta en el centro. Son peligrosos por todas partes.',
+        'MI + MCO + MD: mucha movilidad en el mediocampo. Los medios atacan por banda y el MCO por dentro.',
+        'MI+MCO+MD: alta movilidad bilateral con desbordamiento por banda y creación central. El MCO actúa como eje.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'Cuando sus medios suben, dejan espacio atrás. Si robas, tienes mucho espacio para el contraataque.',
+        'Al adelantarse MI/MD dejan espacio en transición. Contraataque veloz con EXTi/EXTd al espacio liberado.',
+        'MI/MD en posición adelantada generan espacio en transición defensiva. Contraataque en 3 toques al espacio liberado.')});
+      break;
+    case 'carrileros-con-pivote':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Tienen medios que suben por las bandas y un pivote que protege. Las bandas rivales son muy activas.',
+        'MI + MCD + MD: las bandas del mediocampo son muy ofensivas con protección del pivote.',
+        'MI+MCD+MD: actividad bilateral en banda con cobertura del MCD. Alta densidad en zonas laterales.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'El pivote solo no puede tapar todo el centro. El espacio entre el pivote y los medios de banda es el que debes atacar.',
+        'El espacio entre el MCD y los MI/MD es explotable con el tercer hombre.',
+        'El intervalo entre MCD y MI/MD genera espacio para el tercer hombre en zona 14.')});
+      break;
+    case 'doble-mco':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Dos mediapuntas creativos. Son muy peligrosos ofensivamente pero dejan mucho espacio atrás.',
+        'Doble MCO: gran potencial creativo pero vulnerables en la recuperación.',
+        'Estructura 2MCO: alta densidad ofensiva pero déficit en la cobertura defensiva del mediocampo.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'Con tanto jugador arriba, si robas el balón tienen poco para defender. El contraataque es letal.',
+        'Alta vulnerabilidad en transición defensiva con doble MCO. El contraataque veloz es tu arma principal.',
+        'El doble MCO genera espacio en transición defensiva. Contraataque directo en 3 toques como mecanismo primario.')});
+      break;
+    case 'triangulo-medios':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Juegan en triángulo en el mediocampo. Siempre tienen un jugador libre para recibir el pase.',
+        'Triángulo de mediocampistas: siempre hay una opción de pase libre. Difícil de presionar.',
+        'Triángulo MCi+MCD+MCd: superioridad posicional constante en zona intermedia. El vértice libre es la salida.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'El triángulo deja las bandas libres. Ataca siempre por fuera y centra.',
+        'Las bandas quedan expuestas con el triángulo central. EXTi/EXTd en amplitud como vector de ataque.',
+        'El triángulo genera vulnerabilidad bilateral. Amplitud con EXTi/EXTd para forzar la apertura del bloque.')});
+      break;
+    default:
+      lineas.push({tipo:'neutro',txt:tip(
+        'Mediocampo equilibrado. No tienen una vulnerabilidad clara en el centro, pero se puede trabajar por bandas.',
+        'Mediocampo estándar. El ataque en banda con sobrepasos laterales es el camino más eficaz.',
+        'Mediocampo con distribución estándar. Superioridad en banda con LI/LD y EXTi/EXTd como mecanismo primario.')});
+  }
+
+  // ── ANÁLISIS ATAQUE ──
+  switch(est.varianteAtq){
+    case 'doble-punta-pura':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Dos delanteros centro puros. Muy peligrosos en el área, especialmente en centros y pelota parada.',
+        'Doble punta sin extremos: peligro aéreo doble en el área. Los centrales deben estar siempre atentos.',
+        'Doble DC sin EXT: alta densidad de remate en el área. DFCi/DFCd en marcaje estricto sobre los dos puntas.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'Sin extremos, sus bandas están libres. Tus laterales pueden subir mucho.',
+        'Sin EXTi/EXTd, las bandas rivales están desprotegidas. LI/LD pueden incorporarse sin riesgo.',
+        'Ausencia de EXTi/EXTd: las bandas rivales están desprotegidas. LI/LD pueden incorporarse con libertad.')});
+      break;
+    case 'dc-con-sd':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Tienen un delantero clásico y un segundo delantero que se mueve entre líneas. El SD es el más difícil de marcar.',
+        'DC + SD: el SD se mueve entre líneas y es difícil de marcar. Requiere atención específica del mediocampista más cercano.',
+        'DC+SD: el SD opera en el espacio entre la defensa y el mediocampo. Es el jugador más difícil de marcar y el más peligroso.')});
+      lineas.push({tipo:'ok',txt:tip(
+        'El SD baja a buscar el balón y deja espacio a la espalda de la defensa para que entre tu delantero.',
+        'Cuando el SD baja, deja espacio a su espalda. Tu DC puede atacar ese espacio.',
+        'El movimiento descendente del SD genera espacio entre líneas explotable por el DC propio en arrancada.')});
+      break;
+    case 'dc-con-extremos':
+      lineas.push({tipo:'alerta',txt:tip(
+        'Un delantero centro con dos extremos. El triángulo ofensivo es peligroso por todos los lados.',
+        'DC + EXTi + EXTd: amplitud y profundidad simultáneas. Los laterales propios están bajo presión constante.',
+        'DC+EXTi+EXTd: triángulo ofensivo con amplitud bilateral y referencia central. Presión sobre LI/LD en 1v1.')});
+      break;
+    case 'punta-sola':
+      lineas.push({tipo:'ok',txt:tip(
+        'Tienen un solo delantero. Es más fácil de marcar y no genera mucho peligro solo.',
+        'Un solo DC: fácil de neutralizar con marcaje del DFC más cercano. Bajo peligro ofensivo central.',
+        'DC aislado: marcaje con un solo DFC libera al otro para anticipar. Bajo peligro ofensivo central.')});
+      break;
+  }
+
+  // ── ANÁLISIS DEFENSIVO ──
+  if(est.varianteDef==='tres-centrales-carrileros'){
+    lineas.push({tipo:'ok',txt:tip(
+      'Tres defensas centrales con carrileros. Si sus carrileros suben, quedan solo 3 atrás: ¡atácalos!',
+      'Tres centrales con CARi/CARd: cuando los carrileros suben, 3v2 defensivo explotable.',
+      'Tres DFC con CARi/CARd: al adelantarse los carrileros se genera 3v2 defensivo explotable en transición.')});
+  }
+  if(est.varianteDef==='cinco-defensas'){
+    lineas.push({tipo:'alerta',txt:tip(
+      'Cinco defensas. Son muy difíciles de perforar. Necesitas paciencia y tiros de lejos.',
+      'Cinco defensas: bloque muy compacto. Circulación para moverlos + tiro de media distancia.',
+      'Cinco defensas: alta densidad defensiva. Circulación para forzar el desplazamiento del bloque + tiro de media distancia.')});
+  }
+
+  return lineas;
+}
+
+function analizarDT(){
+  const frSelect=document.getElementById('dt-fr').value;
+  const er=document.getElementById('dt-er').value;
+  const mfBase=document.getElementById('dt-mf-base').value;
+  const mfort=document.getElementById('dt-mfort').value;
+  const notas=document.getElementById('dt-notas').value;
+
+  const frDetect=document.getElementById('rival-form-display').textContent;
+  const frDisplay=frDetect&&frDetect!=='—'?frDetect:frSelect;
+
+  if(!jugadoresRival.length&&!frSelect){alert('Selecciona o dibuja la formación del rival');return;}
+
+  const chips=[...document.querySelectorAll('#chips-rival .chip.on')].map(c=>c.dataset.v);
+
+  // Análisis estructural basado en posiciones reales del campo
+  const est=jugadoresRival.length ? analizarEstructura(jugadoresRival) : null;
+
+  const db=TDB[frSelect]||TDB['4-4-2'];
+  const formRecomendada=db.formIdeal||mfBase||'4-3-3';
+  const keyMios=db.keyMios||['EXTi','EXTd'];
+  // dangerRival: combina los del preset con las posiciones reales más ofensivas
+  let dangerRival=db.dangerRival||['DC'];
+  if(est){
+    const riesgosos=[];
+    if(est.nMCO>0) riesgosos.push('MO');
+    if(est.nDC>0) riesgosos.push('DC','DCi','DCd');
+    if(est.nSD>0) riesgosos.push('SD');
+    if(est.nEXTi>0) riesgosos.push('EXTi');
+    if(est.nEXTd>0) riesgosos.push('EXTd');
+    if(riesgosos.length) dangerRival=[...new Set([...dangerRival,...riesgosos])];
+  }
+
+  document.getElementById('dt-nuevo').style.display='none';
+  document.getElementById('dt-res').style.display='block';
+  document.getElementById('dt-res').innerHTML='<div class="loading"><div class="spin"></div><p>Generando análisis...</p></div>';
+
+  setTimeout(()=>{
+    const html=renderDT(frSelect,frDisplay,er,mfBase,formRecomendada,mfort,chips,notas,db,keyMios,dangerRival,est);
+    document.getElementById('dt-res').innerHTML=html;
+    guardarHist('dt',{titulo:`vs ${frDisplay||frSelect}`,fr:frSelect,er,mf:mfBase,mfort,chips,notas,fecha:hoy()});
+  },600);
+}
+
+function renderDT(frSelect,frDisplay,er,mfBase,formRec,mfort,chips,notas,db,keyMios,dangerRival,est){
+  const L=LANG;
+  const suf=L==='simple'?'S':L==='medio'?'M':'T';
+  const deb=db['deb'+suf]||db.debS;
+  const fort=db['for'+suf]||db.forS;
+  const fort_key=mfort||'posesion';
+  const est_key=er||'bloque-medio';
+  const stratDB=SUP_STRAT[fort_key]||SUP_STRAT.posesion;
+  const consejo=(stratDB[L]||stratDB.simple)[est_key]||(stratDB[L]||stratDB.simple)['bloque-medio'];
+  const razonForm=db.razon?db.razon[L]||db.razon.simple:'';
+
+  const cambioDiferente=formRec&&mfBase&&formRec!==mfBase;
+  const formMostrar=formRec||mfBase||frSelect;
+  const campoSVG=generarCampoResultado(frSelect||'4-4-2',formMostrar,keyMios,dangerRival);
+
+  // Bloque de análisis estructural
+  let estructuralHtml='';
+  if(est){
+    const lineas=generarAnalisisEstructural(est,L);
+    const varianteLbl={
+      'doble-pivote-con-mco':'2 MCD + MCO','doble-pivote-puro':'2 MCD puros',
+      'pivote-mediapunta':'MCD + MCO','carrileros-con-mco':'MI + MCO + MD',
+      'carrileros-con-pivote':'MI + MCD + MD','doble-mco':'2 MCO',
+      'solo-mco':'1 MCO','triangulo-medios':'Triángulo de mediocampistas',
+      'mediocampo-estandar':'Mediocampo estándar'
+    }[est.varianteMC]||est.varianteMC;
+    const atqLbl={
+      'doble-punta-pura':'2 DC puros','dc-con-sd':'DC + SD','dc-con-extremos':'DC + EXTi + EXTd',
+      'punta-sola':'1 DC solo','sin-punta-extremos':'Sin punta fija','ataque-mixto':'Ataque mixto'
+    }[est.varianteAtq]||est.varianteAtq;
+
+    estructuralHtml=`<div class="bloque">
+      <div class="bh">🔬 Análisis de estructura real</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+        <span class="pill" style="font-size:12px">Mediocampo: ${varianteLbl}</span>
+        <span class="pill" style="font-size:12px">Ataque: ${atqLbl}</span>
+        <span class="pill" style="font-size:12px">${est.formStr}</span>
+      </div>
+      ${lineas.map(l=>`<div class="${l.tipo==='ok'?'card-ok':l.tipo==='alerta'?'card-alert':'card-ok'}"><p>${l.txt}</p></div>`).join('')}
+    </div>`;
+  }
+
+  const leyenda=`<div class="leyenda">
+    <div class="ley-item"><div class="ley-dot ley-dot-a"></div>Rival</div>
+    <div class="ley-item"><div class="ley-dot" style="background:#0d1e60;border:2px solid #4a7ae8"></div>Tu equipo</div>
+    <div class="ley-item"><div class="ley-dot ley-dot-key"></div>★ Jugadores clave tuyos</div>
+    <div class="ley-item"><div class="ley-dot ley-dot-danger"></div>▲ Peligrosos del rival</div>
+  </div>`;
+
+  // Alertas por chips
+  let alertasHtml='';
+  chips.forEach(c=>{
+    const a=ALERTAS[c];
+    if(a){
+      const txt=a[L==='tec'?'t':L==='medio'?'m':'s']||a.s;
+      const ok=txt.startsWith('✅');
+      alertasHtml+=`<div class="${ok?'card-ok':'card-alert'}"><p>${txt}</p></div>`;
+    }
+  });
+
+  return `<div class="res-card">
+  <span class="res-badge">MODO DT</span>
+  <div class="res-title">Estrategia vs <span class="pill">${frDisplay||frSelect}</span></div>
+
+  ${cambioDiferente?`<div class="form-change">
+    <div class="form-change-title">💡 Formación recomendada: ${formRec}</div>
+    <p>${razonForm}</p>
+  </div>`:(razonForm?`<div class="card-ok"><p>Con tu formación <strong>${mfBase}</strong>: ${razonForm}</p></div>`:'')}
+
+  <div class="bloque">
+    <div class="bh">📐 Parado táctico completo</div>
+    ${leyenda}
+    ${campoSVG}
+  </div>
+
+  ${estructuralHtml}
+
+  <div class="bloque">
+    <div class="bh">⚡ Estrategia principal</div>
+    <div class="card-ok"><p>${consejo}</p></div>
+  </div>
+
+  <div class="bloque">
+    <div class="bh">🔓 Puntos débiles (formación base)</div>
+    <ul>${deb.map(d=>`<li>${d}</li>`).join('')}</ul>
+  </div>
+
+  ${alertasHtml?`<div class="bloque"><div class="bh">🚨 Alertas y oportunidades</div>${alertasHtml}</div>`:''}
+
+  <div class="bloque">
+    <div class="bh">🛡️ Lo que hace bien el rival</div>
+    <ul>${fort.map(f=>`<li>${f}</li>`).join('')}</ul>
+  </div>
+
+  <div class="bloque">
+    <div class="bh">📐 El ciclo táctico</div>
+    <div class="card-ok"><p>${L==='simple'?'Atraer → Fijar → Liberar → Atacar. Cada jugada táctica sigue este orden.':L==='medio'?'Atracción → Fijación → Liberación → Explotación. Este ciclo define cada patrón.':'Atracción → Fijación → Liberación → Explotación. Eje de todos los patrones tácticos.'}</p></div>
+  </div>
+
+  ${notas?`<div class="bloque"><div class="bh">📝 Notas consideradas</div><p style="font-style:italic;color:var(--txt2);font-size:13px">"${notas}"</p></div>`:''}
+
+  <button class="btn-sec" style="margin-top:8px" onclick="document.getElementById('dt-res').style.display='none';document.getElementById('dt-nuevo').style.display='block'">← Nuevo análisis</button>
+</div>`;
+}
+
+/* ═══════ PRONOSTICO ═══════ */
+const PSCORES={'presion-alta':{a:74,d:55},'posesion':{a:64,d:60},'contraataque':{a:59,d:68},'bloque-medio':{a:50,d:70},'bloque-bajo':{a:30,d:82},'juego-directo':{a:57,d:50},'':{a:52,d:55}};
+function calcScore(fA,eA,fB,eB){
+  const sA=PSCORES[eA]||PSCORES[''],sB=PSCORES[eB]||PSCORES[''];
+  let base=50+((sA.a-sB.d)*0.25);
+  if(eA==='contraataque'&&(eB==='presion-alta'||eB==='posesion')) base+=8;
+  if(eA==='presion-alta'&&eB==='bloque-bajo') base+=10;
+  if(eA==='posesion'&&eB==='presion-alta') base+=6;
+  if(fA==='3-5-2'&&(fB==='4-4-2'||fB==='4-4-2r')) base+=6;
+  if((fA==='5-4-1'||fA==='5-3-2')&&eA==='contraataque') base+=4;
+  return base;
+}
+function calcFav(fL,fV,eL,eV){
+  const sL=calcScore(fL,eL,fV,eV)+8,sV=calcScore(fV,eV,fL,eL);
+  const d=sL-sV;
+  if(Math.abs(d)<9) return{quien:'eq',sL,sV};
+  return d>0?{quien:'local',sL,sV}:{quien:'visit',sL,sV};
+}
+function calcGoles(eL,eV){
+  const sL=PSCORES[eL]||PSCORES[''],sV=PSCORES[eV]||PSCORES[''];
+  return{
+    local:Math.round(Math.min((sL.a/(sV.d*0.6+25))*2.3,4.5)*10)/10,
+    visit:Math.round(Math.min((sV.a/(sL.d*0.6+25))*1.8,4.5)*10)/10
+  };
+}
+
+function campoMiniPron(fL,fV){
+  const dL=FORM_POS[fL],dV=FORM_POS[fV];
+  let gs='';
+  if(dL) dL.rival.forEach(([code,cx,cy])=>{
+    const t=LMAP[LANG][code]||code;
+    gs+=`<circle cx="${cx}" cy="${cy}" r="12" fill="#1a3060" stroke="#4a7ae8" stroke-width="1.5"/>
+    <text x="${cx}" y="${cy+0.5}" font-family="Arial Narrow,Arial,sans-serif" font-size="7.5" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="middle">${t}</text>`;
+  });
+  if(dV) dV.propio.forEach(([code,cx,cy])=>{
+    const t=LMAP[LANG][code]||code;
+    gs+=`<circle cx="${cx}" cy="${cy}" r="12" fill="#601818" stroke="#e8403a" stroke-width="1.5"/>
+    <text x="${cx}" y="${cy+0.5}" font-family="Arial Narrow,Arial,sans-serif" font-size="7.5" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="middle">${t}</text>`;
+  });
+  return `<svg viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;border-radius:8px;">
+  <defs><linearGradient id="gp2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0d4020"/><stop offset="100%" stop-color="#0a2e14"/></linearGradient></defs>
+  <rect width="300" height="500" fill="url(#gp2)"/>
+  <rect x="8" y="8" width="284" height="484" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.5" rx="2"/>
+  <line x1="8" y1="250" x2="292" y2="250" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>
+  <circle cx="150" cy="250" r="35" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+  <text x="150" y="130" font-family="Arial Narrow,Arial,sans-serif" font-size="10" font-weight="700" fill="rgba(100,160,255,.5)" text-anchor="middle" letter-spacing="2">LOCAL · ${fL}</text>
+  <text x="150" y="378" font-family="Arial Narrow,Arial,sans-serif" font-size="10" font-weight="700" fill="rgba(255,100,80,.5)" text-anchor="middle" letter-spacing="2">VISITANTE · ${fV}</text>
+  ${gs}
+  </svg>`;
+}
+
+function generarPron(){
+  const fL=document.getElementById('p-fl').value;
+  const fV=document.getElementById('p-fv').value;
+  const eL=document.getElementById('p-el').value;
+  const eV=document.getElementById('p-ev').value;
+  if(!fL||!fV){alert('Selecciona las formaciones de ambos equipos');return;}
+
+  // Recoger todos los chips activos
+  const chTipo=[...document.querySelectorAll('#chips-tipo-partido .chip.on')].map(c=>c.dataset.v);
+  const chTabla=[...document.querySelectorAll('#chips-tabla .chip.on')].map(c=>c.dataset.v);
+  const chVuelta=[...document.querySelectorAll('#chips-vuelta .chip.on')].map(c=>c.dataset.v);
+  const chCond=[...document.querySelectorAll('#chips-condiciones .chip.on')].map(c=>c.dataset.v);
+  const ctx=[...chTipo,...chTabla,...chVuelta,...chCond];
+
+  document.getElementById('pron-nuevo').style.display='none';
+  document.getElementById('pron-res').style.display='block';
+  document.getElementById('pron-res').innerHTML='<div class="loading"><div class="spin"></div><p>Calculando pronóstico...</p></div>';
+
+  setTimeout(()=>{
+    const fav=calcFav(fL,fV,eL,eV);
+    const goles=calcGoles(eL,eV);
+    const total=+(goles.local+goles.visit).toFixed(1);
+    const L=LANG;
+    const pctL=Math.round((fav.sL/(fav.sL+fav.sV))*100);
+
+    // Modificadores de contexto sobre favorito y goles
+    let modFav=0; // +local / -visit
+    let modGoles=0;
+    let ctxNarr=[];
+
+    if(ctx.includes('local-lider'))        { modFav+=6; ctxNarr.push(L==='simple'?'El local llega como líder, con más confianza.':'Local como líder: ventaja anímica y posicional.'); }
+    if(ctx.includes('visit-lider'))        { modFav-=6; ctxNarr.push(L==='simple'?'El visitante es líder y llega con más confianza.':'Visitante líder: mayor solidez y confianza.'); }
+    if(ctx.includes('local-descenso'))     { modGoles+=0.4; ctxNarr.push(L==='simple'?'El local pelea el descenso: va a arriesgar mucho.':'Local presionado por el descenso: partido abierto y arriesgado.'); }
+    if(ctx.includes('visit-descenso'))     { modGoles+=0.3; ctxNarr.push(L==='simple'?'El visitante pelea el descenso: necesita puntos.':'Visitante presionado: saldrá a buscar resultado.'); }
+    if(ctx.includes('local-clasifica'))    { modFav+=5; modGoles+=0.3; ctxNarr.push(L==='simple'?'El local necesita ganar: va a salir con todo.':'Local con necesidad de victoria: alta intensidad ofensiva.'); }
+    if(ctx.includes('visit-clasifica'))    { modFav-=4; modGoles+=0.3; ctxNarr.push(L==='simple'?'El visitante necesita ganar: no vendrá a defenderse.':'Visitante con necesidad: partido abierto por ambos lados.'); }
+    if(ctx.includes('local-relajado'))     { modFav-=5; ctxNarr.push(L==='simple'?'El local ya no se juega nada: menos motivación.':'Local sin presión: posible bajón de intensidad.'); }
+    if(ctx.includes('visit-relajado'))     { modFav+=4; ctxNarr.push(L==='simple'?'El visitante ya no se juega nada: menos motivación.':'Visitante sin presión: puede bajar la intensidad.'); }
+    if(ctx.includes('empate-clasifica-local'))  { modGoles-=0.4; ctxNarr.push(L==='simple'?'Al local le vale el empate: puede jugar más conservador.':'Local con empate suficiente: estrategia conservadora probable.'); }
+    if(ctx.includes('empate-clasifica-visit'))  { modFav+=3; modGoles-=0.4; ctxNarr.push(L==='simple'?'Al visitante le vale el empate: cuidado, vendrá a no perder.':'Visitante cómodo con empate: estrategia de bloque probable.'); }
+    if(ctx.includes('local-gana-global'))  { modFav+=4; modGoles-=0.3; ctxNarr.push(L==='simple'?'El local gana en el global: puede defender resultado.':'Local con ventaja en el global: puede gestionar el marcador.'); }
+    if(ctx.includes('visit-gana-global'))  { modFav-=5; modGoles+=0.4; ctxNarr.push(L==='simple'?'El visitante gana en el global: el local tiene que remontar.':'Local obligado a remontar: partido muy abierto.'); }
+    if(ctx.includes('empate-global'))      { modGoles+=0.3; ctxNarr.push(L==='simple'?'El global está igualado: todo se decide aquí.':'Global empatado: alta presión en ambos lados.'); }
+    if(ctx.includes('local-gana-2mas'))    { modFav+=6; modGoles-=0.5; ctxNarr.push(L==='simple'?'El local gana por 2 o más en el global: prácticamente clasificado.':'Local con ventaja de 2 goles: puede administrar el resultado.'); }
+    if(ctx.includes('visit-gana-2mas'))    { modFav-=7; modGoles+=0.6; ctxNarr.push(L==='simple'?'El visitante gana por 2+: el local tiene que remontar sí o sí.':'Local obligado a atacar para remontar: partido muy abierto.'); }
+    if(ctx.includes('local-bajas'))        { modFav-=5; ctxNarr.push(L==='simple'?'El local tiene bajas importantes: su rendimiento puede bajar.':'Bajas del local: reduce la calidad táctica prevista.'); }
+    if(ctx.includes('visit-bajas'))        { modFav+=5; ctxNarr.push(L==='simple'?'El visitante tiene bajas importantes: el local se beneficia.':'Bajas del visitante: el local tiene ventaja real.'); }
+    if(ctx.includes('local-sancionado'))   { modFav-=4; ctxNarr.push(L==='simple'?'El local tiene un jugador clave sancionado.':'Sancionado clave del local: hueco táctico en su estructura.'); }
+    if(ctx.includes('visit-sancionado'))   { modFav+=4; ctxNarr.push(L==='simple'?'El visitante tiene un jugador clave sancionado.':'Sancionado clave del visitante: debilidad táctica detectable.'); }
+    if(ctx.includes('local-racha-buena'))  { modFav+=4; ctxNarr.push(L==='simple'?'El local viene en buena racha: con confianza alta.':'Local en racha: confianza y automatismos funcionando.'); }
+    if(ctx.includes('visit-racha-buena'))  { modFav-=4; ctxNarr.push(L==='simple'?'El visitante viene en buena racha: peligroso.':'Visitante en racha: solidez colectiva elevada.'); }
+    if(ctx.includes('local-racha-mala'))   { modFav-=5; ctxNarr.push(L==='simple'?'El local viene de malos resultados: poca confianza.':'Local en mala racha: confianza baja, posible tensión interna.'); }
+    if(ctx.includes('visit-racha-mala'))   { modFav+=4; ctxNarr.push(L==='simple'?'El visitante viene de malos resultados: vulnerable.':'Visitante en mala racha: vulnerable a la presión del local.'); }
+    if(ctx.includes('lluvia'))             { modGoles-=0.3; ctxNarr.push(L==='simple'?'Lluvia y cancha pesada: partido más físico y menos técnico.':'Condiciones adversas: reduce el juego técnico, favorece lo físico.'); }
+    if(ctx.includes('calor'))             { modGoles-=0.2; ctxNarr.push(L==='simple'?'Calor extremo: los equipos se cansarán más rápido.':'Calor: desgaste físico acelerado, ritmo más lento en 2ª parte.'); }
+    if(ctx.includes('cancha-sintetico'))   { ctxNarr.push(L==='simple'?'Cancha sintética: favorece el juego rápido de toque corto.':'Sintético: favorece el toque rápido y perjudica el juego aéreo.'); }
+    if(ctx.includes('altitud'))            { modGoles-=0.3; ctxNarr.push(L==='simple'?'Partido en altitud: el equipo visitante se cansa más.':'Altitud: impacto en el visitante. Menor ritmo en 2ª parte.'); }
+    if(ctx.includes('aficion-local'))      { modFav+=3; ctxNarr.push(L==='simple'?'La afición local empuja mucho: un factor más para el local.':'Factor afición: presión extra sobre el visitante.'); }
+    if(ctx.includes('arbitro-casero'))     { modFav+=3; ctxNarr.push(L==='simple'?'El árbitro históricamente favorece al local.':'Factor arbitral histórico favorable al local.'); }
+    if(ctx.includes('final'))              { modGoles-=0.4; ctxNarr.push(L==='simple'?'Es una final: los dos equipos van a ser más cautelosos al principio.':'Final: alta presión, menor riesgo inicial, goles tardíos probables.'); }
+    if(ctx.includes('clasico'))            { modGoles+=0.3; ctxNarr.push(L==='simple'?'Es un clásico: la intensidad y el ritmo serán muy altos.':'Clásico/Derbi: alta intensidad, muchos duelos, posibles tarjetas.'); }
+    if(ctx.includes('eliminatoria'))       { modGoles-=0.2; ctxNarr.push(L==='simple'?'Es eliminatoria: nadie va a arriesgar de entrada.':'Eliminatoria: mayor cautela táctica, se busca no perder primero.'); }
+
+    // Aplicar modificadores
+    const sLmod=fav.sL+modFav, sVmod=fav.sV;
+    const dmod=sLmod-sVmod;
+    const pctLmod=Math.round((sLmod/(sLmod+sVmod))*100);
+    const golesAdj={local:Math.max(0.2,+(goles.local+modGoles*0.5).toFixed(1)),visit:Math.max(0.2,+(goles.visit+modGoles*0.4).toFixed(1))};
+    const totalAdj=+(golesAdj.local+golesAdj.visit).toFixed(1);
+
+    let favFinal;
+    if(Math.abs(dmod)<9) favFinal='eq';
+    else favFinal=dmod>0?'local':'visit';
+
+    const favClass=favFinal==='local'?'fav-local':favFinal==='visit'?'fav-visit':'fav-eq';
+    const favTxt=favFinal==='local'?'Favorito: Local':favFinal==='visit'?'Favorito: Visitante':L==='simple'?'Partido muy parejo':'Partido equilibrado';
+    const tipoG=totalAdj>4?L==='simple'?'Muchos goles esperados':'Alta expectativa goleadora':totalAdj>2.5?L==='simple'?'Goles posibles para ambos':'Goles para ambos lados':L==='simple'?'Partido de pocos goles':'Bajo volumen ofensivo';
+
+    let narr=[];
+    if(eL==='presion-alta'&&eV==='presion-alta') narr.push(L==='simple'?'Los dos equipos presionan fuerte. Muy intenso desde el inicio.':'Duelo de pressing. El error en la salida es determinante.');
+    else if(eL==='bloque-bajo'&&eV==='bloque-bajo') narr.push(L==='simple'?'Los dos quieren defender. Partido muy cerrado.':'Dos bloques bajos. Pelota parada como diferenciador.');
+    else if(eL==='posesion'&&eV==='contraataque') narr.push(L==='simple'?'El local quiere tener el balón, el visitante espera y sale rápido.':'Posesión local vs. contraataque visitante.');
+    else if(eV==='posesion'&&eL==='contraataque') narr.push(L==='simple'?'El visitante quiere el balón. El local espera y contragolpea.':'Posesión visitante vs. contraataque local.');
+    else narr.push(tipoG);
+    if(totalAdj<2.5) narr.push(L==='simple'?'Probable gol tardío, después del minuto 70.':'Gol tardío probable (min 70+).');
+    if(eL==='bloque-bajo'||eV==='bloque-bajo'||eL==='bloque-medio'||eV==='bloque-medio') narr.push(L==='simple'?'Las jugadas de pelota parada van a ser muy importantes.':'Las pelotas paradas tienen peso importante.');
+    if(eL==='contraataque'||eV==='contraataque') narr.push(L==='simple'?'Habrá contraataques rápidos y peligrosos.':'Transiciones ofensivas como vector de ocasión.');
+
+    const dbL=TDB[fL]||TDB['4-4-2'],dbV=TDB[fV]||TDB['4-4-2'];
+    const suf=L==='simple'?'S':L==='medio'?'M':'T';
+    const debL=(dbL['deb'+suf]||dbL.debS).slice(0,2);
+    const debV=(dbV['deb'+suf]||dbV.debS).slice(0,2);
+    let corners=5;
+    if(eL==='posesion'||eV==='posesion') corners+=2;
+    if(eL==='presion-alta'||eV==='presion-alta') corners+=1;
+    if(eL==='juego-directo'||eV==='juego-directo'||eL==='juego-aereo'||eV==='juego-aereo') corners+=2;
+
+    const campoSVG=campoMiniPron(fL,fV);
+    const tipoPartido=chTipo.length?chTipo.map(v=>({liga:'Liga/Torneo',copa:'Copa/Liguilla',eliminatoria:'Eliminatoria',ida:'Partido de ida',vuelta:'Partido de vuelta',final:'Final',clasico:'Clásico/Derbi',amistoso:'Amistoso'}[v]||v)).join(' · '):'';
+
+    const html=`<div class="res-card">
+<span class="res-badge">PRONÓSTICO</span>
+${tipoPartido?`<div style="font-family:var(--ff-cond);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--amarillo);margin-bottom:8px">${tipoPartido}</div>`:''}
+<div class="fav-banner ${favClass}">
+  <div class="fav-txt">${favTxt}</div>
+  <div class="fav-sub">${favFinal!=='eq'?'Ventaja detectada (formaciones + contexto)':'Sin favorito claro según los datos'}</div>
+</div>
+<div class="score-pred">Local — Visitante</div>
+<div class="score-sub">Goles esperados: ${golesAdj.local.toFixed(1)} — ${golesAdj.visit.toFixed(1)}</div>
+
+<div class="bloque">
+  <div class="bh">📐 Formaciones en campo</div>
+  <div class="leyenda">
+    <div class="ley-item"><div class="ley-dot" style="background:#1a3060;border:2px solid #4a7ae8"></div>Local · ${fL}</div>
+    <div class="ley-item"><div class="ley-dot" style="background:#601818;border:2px solid #e8403a"></div>Visitante · ${fV}</div>
+  </div>
+  ${campoSVG}
+</div>
+
+<div class="metricas">
+  <div class="met-card"><div class="met-val">${tipoG}</div><div class="met-lbl">Expectativa goles</div></div>
+  <div class="met-card"><div class="met-val">~${corners} corners</div><div class="met-lbl">Tiros de esquina</div></div>
+</div>
+
+<div class="bloque">
+  <div class="bh">📊 Dominio proyectado</div>
+  <div class="barra-wrap">
+    <div class="barra-lbl"><span style="color:#4a7ae8">Local ${pctLmod}%</span><span style="color:#e8403a">${100-pctLmod}% Visitante</span></div>
+    <div class="barra-track"><div class="barra-l" style="width:${pctLmod}%"></div><div class="barra-v"></div></div>
+  </div>
+</div>
+
+<div class="bloque">
+  <div class="bh">🎬 Cómo se espera el partido</div>
+  ${narr.map(n=>`<div class="card-ok" style="margin-bottom:5px"><p>${n}</p></div>`).join('')}
+</div>
+
+${ctxNarr.length?`<div class="bloque">
+  <div class="bh">🔍 Factores de contexto detectados</div>
+  ${ctxNarr.map(n=>`<div class="card-alert" style="margin-bottom:4px"><p>${n}</p></div>`).join('')}
+</div>`:''}
+
+<div class="bloque">
+  <div class="bh">⚡ Vulnerabilidades</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div><p style="font-family:var(--ff-cond);font-size:11px;font-weight:700;letter-spacing:1px;color:#4a7ae8;margin-bottom:5px">LOCAL</p>${debL.map(d=>`<p style="font-size:12px;margin-bottom:4px;color:var(--txt2)">• ${d}</p>`).join('')}</div>
+    <div><p style="font-family:var(--ff-cond);font-size:11px;font-weight:700;letter-spacing:1px;color:#e8403a;margin-bottom:5px">VISITANTE</p>${debV.map(d=>`<p style="font-size:12px;margin-bottom:4px;color:var(--txt2)">• ${d}</p>`).join('')}</div>
+  </div>
+</div>
+
+<button class="btn-sec" style="margin-top:8px" onclick="document.getElementById('pron-res').style.display='none';document.getElementById('pron-nuevo').style.display='block'">← Nuevo pronóstico</button>
+</div>`;
+    document.getElementById('pron-res').innerHTML=html;
+    guardarHist('pron',{titulo:`${fL} vs ${fV}`,fL,fV,eL,eV,fecha:hoy()});
+  },600);
+}
+
+/* ═══════ HISTORIAL ═══════ */
+function hoy(){return new Date().toLocaleDateString('es-MX');}
+function guardarHist(tipo,data){try{let h=JSON.parse(localStorage.getItem('tf_'+tipo)||'[]');h.unshift({...data,id:Date.now()});localStorage.setItem('tf_'+tipo,JSON.stringify(h.slice(0,20)));}catch(e){}}
+function renderHist(tipo){
+  const pre=tipo==='dt'?'dt':'pron';
+  try{
+    const h=JSON.parse(localStorage.getItem('tf_'+tipo)||'[]');
+    const el=document.getElementById(pre+'-hist-lista');
+    el.innerHTML=h.length?h.map(x=>`<div class="hist-item"><div class="hist-fecha">${x.fecha}</div><div class="hist-titulo">${x.titulo}</div></div>`).join(''):'<div class="empty"><div class="ico">📂</div><p>Sin análisis guardados.</p></div>';
+  }catch(e){}
+}
+function renderHomeHist(){
+  try{
+    const dt=JSON.parse(localStorage.getItem('tf_dt')||'[]').map(x=>({...x,tipo:'DT'}));
+    const pr=JSON.parse(localStorage.getItem('tf_pron')||'[]').map(x=>({...x,tipo:'PRON'}));
+    const all=[...dt,...pr].sort((a,b)=>b.id-a.id).slice(0,5);
+    const el=document.getElementById('home-hist');
+    if(!all.length) return;
+    el.innerHTML=all.map(x=>`<div class="hist-item"><div class="hist-fecha">${x.fecha} · <span style="color:${x.tipo==='DT'?'var(--v5)':'var(--amarillo)'}">${x.tipo}</span></div><div class="hist-titulo">${x.titulo}</div></div>`).join('');
+  }catch(e){}
+}
+
+/* ═══════ CHIPS ═══════ */
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+
+renderHomeHist();
+
+</script>
+</body>
+</html>
